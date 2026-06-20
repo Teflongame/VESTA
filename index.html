@@ -1466,6 +1466,41 @@ body {
     <div class="kpi gr"><div class="klbl">Taux moyen pondéré</div><div class="kval" id="l-rate">—</div></div>
   </div>
   <div class="card"><div id="livrets-tbl"></div></div>
+
+  <!-- ════ MÉTAUX PRÉCIEUX ════ -->
+  <div class="card mb" style="margin-top:18px;">
+    <div class="chd" style="justify-content:space-between;align-items:center;">
+      <span>🥇 Métaux précieux
+        <span class="chd-sub">Or · Argent · Cours en temps réel</span>
+      </span>
+      <button class="btn sm" onclick="ajouterMetal()" style="font-size:11px;">+ Ajouter</button>
+    </div>
+
+    <!-- Cours actuels -->
+    <div class="krow k3 mb" style="margin-bottom:14px;">
+      <div class="kpi">
+        <div class="klbl">Or (XAU/EUR)</div>
+        <div class="kval" id="cours-or">— €/oz</div>
+        <div class="ksub" id="cours-or-g">— €/g</div>
+      </div>
+      <div class="kpi">
+        <div class="klbl">Argent (XAG/EUR)</div>
+        <div class="kval" id="cours-argent">— €/oz</div>
+        <div class="ksub" id="cours-argent-g">— €/g</div>
+      </div>
+      <div class="kpi">
+        <div class="klbl">Valeur totale</div>
+        <div class="kval" id="metal-total-val">0 €</div>
+        <div class="ksub" id="metal-total-pv">PV : 0 €</div>
+      </div>
+    </div>
+
+    <div id="metaux-list"></div>
+    <div style="font-size:9px;color:var(--muted);margin-top:8px;font-family:'JetBrains Mono',monospace;">
+      Cours récupérés via API gratuite · Actualisation manuelle · Exonération PV après 22 ans de détention
+    </div>
+  </div>
+
 </div>
 
 <!-- ══════════ GRAPHIQUES ══════════ -->
@@ -2982,6 +3017,16 @@ body {
 <div id="toast"></div>
 
 <script>
+// ── Supprimer les "Script error." cross-origin bruyants ────────
+window.addEventListener('error', function(e) {
+  if (e.message === 'Script error.' || e.message === 'Script error') {
+    // Erreur CORS d'un script externe (Firebase, CDN...) - silencieux
+    console.warn('[Vesta] Erreur script externe (CORS):', e.filename || 'inconnu');
+    e.preventDefault();
+    return true;
+  }
+});
+
 // ══════════════════════════════════════════════════════════════
 // OUTIL PEG SNCF — Optimiseur prime + comparaison scénarios
 // ══════════════════════════════════════════════════════════════
@@ -4839,7 +4884,7 @@ var fmtP  = function(v){ return window._fmtP  ? window._fmtP(v)  : ((v>=0?'+':''
 var pC    = function(v){ return window._pC    ? window._pC(v)    : (v>=0?'pos':'neg'); };
 var cAll  = function(){ return window._cAll ? window._cAll() : {}; };
 var _sharedState = {
-  positions: [], immo: [], livrets: [],
+  positions: [], immo: [], livrets: [], metaux: [],
   history: [], snapshots: [], actionsDone: []
 };
 var getS  = function(){ return _sharedState; }; // always returns real state, never null
@@ -14731,7 +14776,17 @@ window.lancerConseilRapide = lancerConseilRapide;
     if(ov){ov.style.opacity='0';ov.style.transition='opacity .4s';setTimeout(function(){ov.remove();},400);}
   }
 
-  function loadScript(src,cb){var s=document.createElement('script');s.src=src;s.onload=cb;document.head.appendChild(s);}
+  function loadScript(src,cb,onerr){
+  var s=document.createElement('script');
+  s.src=src;
+  s.onload=cb||function(){};
+  s.onerror=function(){
+    console.warn('[Vesta] Script non chargé (réseau/CORS):', src);
+    if(onerr) onerr();
+  };
+  s.crossOrigin='anonymous';
+  document.head.appendChild(s);
+}
 
   document.addEventListener('DOMContentLoaded',function(){
     createSyncUI();
@@ -16303,6 +16358,398 @@ window.updateProjectionInteractive = updateProjectionInteractive;
 
 
 <script>
+// ══════════════════════════════════════════════════
+// MÉTAUX PRÉCIEUX — Or physique / Bullion / ETF Or
+// ══════════════════════════════════════════════════
+
+var _coursMetaux = { or: null, argent: null, ts: 0 };
+
+// Types d'actifs métaux
+var METAL_TYPES = [
+  {
+    id: 'marianne_or',
+    label: 'Marianne-Or (Bullion MdP)',
+    emoji: '🪙',
+    metal: 'or',
+    desc: 'Pièce d\'investissement Monnaie de Paris 2026 — Or 999‰ à cours légal',
+    color: '#c9a84c',
+    tag: 'BULLION',
+    fiscalExo: 22,  // ans
+    tva: false,
+    formats: [
+      { label: '1 once (31,1g)',    grammes: 31.1035 },
+      { label: '1/2 once (15,55g)', grammes: 15.5518 },
+      { label: '1/4 once (7,78g)',  grammes: 7.7759  },
+      { label: '1/10 once (3,11g)', grammes: 3.1104  },
+    ],
+  },
+  {
+    id: 'or_physique',
+    label: 'Or physique (autres pièces)',
+    emoji: '🥇',
+    metal: 'or',
+    desc: 'Napoléon, Louis d\'or, Krugerrand, Maple Leaf, Lingot...',
+    color: '#d4a017',
+    tag: 'PHYSIQUE',
+    fiscalExo: 22,
+    tva: false,
+    formats: [
+      { label: 'Napoléon / 20F (5,81g)',  grammes: 5.8065 },
+      { label: 'Louis d\'or (7,65g)',      grammes: 7.65   },
+      { label: 'Souverain UK (7,32g)',     grammes: 7.322  },
+      { label: 'Krugerrand 1 oz (31,1g)', grammes: 31.1035},
+      { label: 'Lingot 1kg',              grammes: 1000   },
+      { label: 'Personnalisé',            grammes: null   },
+    ],
+  },
+  {
+    id: 'argent_physique',
+    label: 'Argent physique',
+    emoji: '🥈',
+    metal: 'argent',
+    desc: 'Pièces et lingots argent 999‰ — TVA 20% à l\'achat',
+    color: '#aaaaaa',
+    tag: 'ARGENT',
+    fiscalExo: 22,
+    tva: true,
+    formats: [
+      { label: 'Philharmonique 1 oz (31,1g)', grammes: 31.1035 },
+      { label: 'Maple Leaf 1 oz (31,1g)',     grammes: 31.1035 },
+      { label: 'Lingot 1kg',                  grammes: 1000    },
+      { label: 'Personnalisé',                grammes: null    },
+    ],
+  },
+  {
+    id: 'etf_or',
+    label: 'ETF Or (papier)',
+    emoji: '📊',
+    metal: 'or',
+    desc: 'iShares Gold (IGLN), Amundi Gold, WisdomTree... — Pas de détention physique',
+    color: '#5b8dee',
+    tag: 'ETF',
+    fiscalExo: null,  // PFU 30% ou barème IR — pas d\'exo 22 ans
+    tva: false,
+    formats: [
+      { label: 'Part ETF (valeur en €)', grammes: null },
+    ],
+  },
+];
+window.METAL_TYPES = METAL_TYPES;
+
+// Fetch cours or/argent via Frankfurt API
+async function fetchCoursMetaux() {
+  try {
+    var [rOr, rAg] = await Promise.all([
+      fetch('https://api.frankfurter.app/latest?from=XAU&to=EUR'),
+      fetch('https://api.frankfurter.app/latest?from=XAG&to=EUR'),
+    ]);
+    var dOr = await rOr.json();
+    var dAg = await rAg.json();
+    var orEurOz  = dOr.rates && dOr.rates.EUR ? (1 / dOr.rates.EUR) : null;
+    var agEurOz  = dAg.rates && dAg.rates.EUR ? (1 / dAg.rates.EUR) : null;
+    if (orEurOz) { _coursMetaux.or = orEurOz; _coursMetaux.argent = agEurOz; _coursMetaux.ts = Date.now(); }
+  } catch(e) {
+    if (!_coursMetaux.or) { _coursMetaux.or = 3900; _coursMetaux.argent = 36; }
+  }
+  _updateCoursUI();
+  _renderMetaux();
+}
+window.fetchCoursMetaux = fetchCoursMetaux;
+
+function _updateCoursUI() {
+  var OZ = 31.1035;
+  var or = _coursMetaux.or, ag = _coursMetaux.argent;
+  var set = function(id, v) { var el=document.getElementById(id); if(el) el.textContent=v; };
+  if (or) { set('cours-or', Math.round(or).toLocaleString('fr')+' €/oz'); set('cours-or-g', (or/OZ).toFixed(2)+' €/g'); }
+  if (ag) { set('cours-argent', Math.round(ag).toLocaleString('fr')+' €/oz'); set('cours-argent-g', (ag/OZ).toFixed(2)+' €/g'); }
+}
+
+function ajouterMetal() {
+  var OZ  = 31.1035;
+  var or  = _coursMetaux.or  || 3900;
+  var ag  = _coursMetaux.argent || 36;
+
+  var typeOpts = METAL_TYPES.map(function(t) {
+    return '<option value="'+t.id+'">'+t.emoji+' '+t.label+' ['+t.tag+']</option>';
+  }).join('');
+
+  var modal = document.createElement('div');
+  modal.className = 'ov on';
+  modal.id = 'ov-add-metal';
+  modal.innerHTML = '<div class="modal" style="width:520px;max-width:96vw;padding:24px;max-height:90vh;overflow-y:auto;">'
+    + '<div style="font-family:Playfair Display,serif;font-size:17px;font-weight:700;margin-bottom:4px;">🥇 Ajouter un actif métal</div>'
+    + '<div id="m-type-desc" style="font-size:11px;color:var(--muted);margin-bottom:16px;"></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
+    + '<div style="grid-column:1/-1;"><label style="font-size:10px;color:var(--muted);font-family:JetBrains Mono,monospace;text-transform:uppercase;">Type d\'actif</label>'
+    + '<select id="m-type" style="width:100%;margin-top:5px;" onchange="onMetalTypeChange()">'+typeOpts+'</select></div>'
+    + '<div style="grid-column:1/-1;"><label style="font-size:10px;color:var(--muted);font-family:JetBrains Mono,monospace;text-transform:uppercase;">Libelle</label>'
+    + '<input id="m-label" style="width:100%;margin-top:5px;"></div>'
+    + '<div id="m-format-wrap"><label style="font-size:10px;color:var(--muted);font-family:JetBrains Mono,monospace;text-transform:uppercase;">Format</label>'
+    + '<select id="m-format" style="width:100%;margin-top:5px;" onchange="onMetalFormatChange()"></select></div>'
+    + '<div id="m-grammes-wrap"><label style="font-size:10px;color:var(--muted);font-family:JetBrains Mono,monospace;text-transform:uppercase;">Grammes / piece</label>'
+    + '<input id="m-grammes" type="number" step="0.001" style="width:100%;margin-top:5px;" oninput="updateMetalPreview()"></div>'
+    + '<div><label style="font-size:10px;color:var(--muted);font-family:JetBrains Mono,monospace;text-transform:uppercase;">Quantite (pieces)</label>'
+    + '<input id="m-qte" type="number" value="1" min="1" step="1" style="width:100%;margin-top:5px;" oninput="updateMetalPreview()"></div>'
+    + '<div><label style="font-size:10px;color:var(--muted);font-family:JetBrains Mono,monospace;text-transform:uppercase;">Prix achat total (€)</label>'
+    + '<input id="m-prix-achat" type="number" step="1" style="width:100%;margin-top:5px;" oninput="updateMetalPreview()"></div>'
+    + '<div><label style="font-size:10px;color:var(--muted);font-family:JetBrains Mono,monospace;text-transform:uppercase;">Date achat</label>'
+    + '<input id="m-date" type="date" value="2026-06-16" style="width:100%;margin-top:5px;"></div>'
+    + '<div><label style="font-size:10px;color:var(--muted);font-family:JetBrains Mono,monospace;text-transform:uppercase;">Remarque</label>'
+    + '<input id="m-note" style="width:100%;margin-top:5px;"></div>'
+    + '</div>'
+    + '<div id="m-val-preview" style="margin-top:14px;padding:10px 14px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;font-size:11px;line-height:1.8;"></div>'
+    + '<div style="display:flex;gap:8px;margin-top:16px;">'
+    + '<button class="btn" onclick="saveMetal()" style="flex:1;background:var(--gold);color:#1a1a2e;font-weight:700;">✅ Enregistrer</button>'
+    + '<button class="btn gh" onclick="closeOv(\'ov-add-metal\')" style="flex:1;">Annuler</button>'
+    + '</div></div>';
+
+  document.body.appendChild(modal);
+  setTimeout(function() { onMetalTypeChange(); }, 50);
+}
+window.ajouterMetal = ajouterMetal;
+
+function onMetalTypeChange() {
+  var typeId = (document.getElementById('m-type')||{}).value || 'marianne_or';
+  var type   = METAL_TYPES.find(function(t){ return t.id === typeId; }) || METAL_TYPES[0];
+  var desc   = document.getElementById('m-type-desc');
+  var lbl    = document.getElementById('m-label');
+  var fmt    = document.getElementById('m-format');
+  var note   = document.getElementById('m-note');
+  var gwrap  = document.getElementById('m-grammes-wrap');
+
+  if (desc) desc.innerHTML = '<span style="color:'+type.color+';">'+type.emoji+' ['+type.tag+']</span> '+type.desc;
+  if (lbl && !lbl.dataset.edited) lbl.value = type.label;
+
+  // Remplir les formats
+  if (fmt) {
+    fmt.innerHTML = type.formats.map(function(f,i){
+      return '<option value="'+i+'">'+f.label+'</option>';
+    }).join('');
+  }
+
+  // Note par defaut selon type
+  if (note && !note.dataset.edited) {
+    var notes = {
+      marianne_or: 'Cadeau naissance enfant — transmission 30 ans',
+      or_physique:  'Or physique',
+      argent_physique: 'Argent physique',
+      etf_or: 'ETF Or PEA/CTO',
+    };
+    note.value = notes[typeId] || '';
+  }
+
+  // Cacher grammes pour ETF
+  if (gwrap) gwrap.style.display = typeId === 'etf_or' ? 'none' : '';
+
+  onMetalFormatChange();
+}
+window.onMetalTypeChange = onMetalTypeChange;
+
+function onMetalFormatChange() {
+  var typeId  = (document.getElementById('m-type')||{}).value || 'marianne_or';
+  var type    = METAL_TYPES.find(function(t){ return t.id === typeId; }) || METAL_TYPES[0];
+  var fmtIdx  = parseInt((document.getElementById('m-format')||{}).value) || 0;
+  var fmt     = type.formats[fmtIdx];
+  var gramEl  = document.getElementById('m-grammes');
+  if (gramEl && fmt) {
+    if (fmt.grammes !== null) {
+      gramEl.value    = fmt.grammes;
+      gramEl.readOnly = fmt.label !== 'Personnalise';
+    } else {
+      gramEl.value    = '';
+      gramEl.readOnly = false;
+    }
+  }
+  updateMetalPreview();
+}
+window.onMetalFormatChange = onMetalFormatChange;
+
+function updateMetalPreview() {
+  var OZ     = 31.1035;
+  var typeId = (document.getElementById('m-type')||{}).value || 'marianne_or';
+  var type   = METAL_TYPES.find(function(t){ return t.id === typeId; }) || METAL_TYPES[0];
+  var gramEl = document.getElementById('m-grammes');
+  var qteEl  = document.getElementById('m-qte');
+  var prixEl = document.getElementById('m-prix-achat');
+  var prev   = document.getElementById('m-val-preview');
+  if (!prev) return;
+
+  var cours  = type.metal === 'or' ? (_coursMetaux.or||3900) : (_coursMetaux.argent||36);
+  var qte    = parseInt((qteEl||{}).value) || 1;
+  var gr     = parseFloat((gramEl||{}).value) || 0;
+  var isETF  = typeId === 'etf_or';
+
+  var valTot, prixSugg;
+  if (isETF) {
+    valTot   = parseFloat((prixEl||{}).value) || 0;
+    prixSugg = valTot;
+  } else {
+    valTot   = gr / OZ * cours * qte;
+    prixSugg = Math.round(valTot * (type.tva ? 1.2 : 1));
+    if (prixEl && !prixEl.value) prixEl.value = prixSugg;
+  }
+
+  var prixAch = parseFloat((prixEl||{}).value) || prixSugg;
+  var pv = valTot - prixAch;
+
+  var html = '';
+  if (!isETF && gr > 0) {
+    html += '<b>Valeur estimee :</b> '+(gr/OZ*cours).toFixed(0)+' €/pièce × '+qte
+      +' = <b style="color:var(--gold);">'+valTot.toFixed(0)+' €</b>';
+    html += ' <span style="color:var(--muted);">· Cours '+type.metal+' : '+Math.round(cours)+'€/oz</span><br>';
+  } else if (isETF) {
+    html += '<b>ETF Or :</b> valeur suit le cours de l\'or (XAU)<br>';
+    html += '<span style="color:var(--muted);">Pas de TVA · Fiscalite PFU 30% (pas d\'exo 22 ans)</span><br>';
+  }
+  if (type.tva)      html += '<span style="color:#e07b39;">⚠️ TVA 20% incluse dans le prix d\'achat</span><br>';
+  if (type.fiscalExo) html += '<span style="color:var(--muted);">⚖️ Exoneration PV apres '+type.fiscalExo+' ans</span>';
+  else                html += '<span style="color:var(--muted);">⚖️ PFU 30% ou bareme IR a la revente</span>';
+
+  prev.innerHTML = html;
+}
+window.updateMetalPreview = updateMetalPreview;
+
+function saveMetal() {
+  var S      = getS();
+  if (!S.metaux) S.metaux = [];
+  var OZ     = 31.1035;
+  var typeId = document.getElementById('m-type').value;
+  var type   = METAL_TYPES.find(function(t){ return t.id===typeId; }) || METAL_TYPES[0];
+  var label  = document.getElementById('m-label').value.trim() || type.label;
+  var gr     = parseFloat(document.getElementById('m-grammes').value) || 0;
+  var qte    = parseInt(document.getElementById('m-qte').value) || 1;
+  var prix   = parseFloat(document.getElementById('m-prix-achat').value) || 0;
+  var date   = document.getElementById('m-date').value;
+  var note   = document.getElementById('m-note').value.trim();
+
+  S.metaux.push({
+    id:        'metal-' + Date.now(),
+    typeId:    typeId,
+    metal:     type.metal,
+    tag:       type.tag,
+    label:     label,
+    grammes:   gr,
+    qte:       qte,
+    prixAchat: prix,
+    dateAchat: date,
+    note:      note,
+    fiscalExo: type.fiscalExo,
+    tva:       type.tva,
+  });
+
+  if (window._syncState) window._syncState(S);
+  closeOv('ov-add-metal');
+  _renderMetaux();
+  fetchCoursMetaux();
+  if (window._toast) window._toast(type.emoji+' '+label+' ajoute !');
+}
+window.saveMetal = saveMetal;
+
+function supprimerMetal(id) {
+  var S = getS();
+  if (!S.metaux) return;
+  S.metaux = S.metaux.filter(function(m){ return m.id !== id; });
+  if (window._syncState) window._syncState(S);
+  _renderMetaux();
+}
+window.supprimerMetal = supprimerMetal;
+
+function _renderMetaux() {
+  var el = document.getElementById('metaux-list');
+  if (!el) return;
+  var S  = getS();
+  var mx = (S && S.metaux) || [];
+  var OZ = 31.1035;
+  var or = _coursMetaux.or || 3900;
+  var ag = _coursMetaux.argent || 36;
+  var totalVal = 0, totalPrix = 0;
+
+  if (!mx.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:16px 0;text-align:center;">'
+      + 'Aucun metal physique · Cliquez "+ Ajouter" pour enregistrer votre Marianne-Or</div>';
+    return;
+  }
+
+  // Grouper par type
+  var groups = {};
+  mx.forEach(function(m) { (groups[m.typeId]||(groups[m.typeId]=[])).push(m); });
+
+  var html = '';
+  METAL_TYPES.forEach(function(t) {
+    var items = groups[t.id];
+    if (!items || !items.length) return;
+
+    html += '<div style="margin-bottom:14px;">';
+    html += '<div style="font-size:11px;font-weight:700;color:'+t.color+';margin-bottom:8px;padding:4px 0;border-bottom:1px solid var(--bd);">'
+      + t.emoji+' '+t.label+' <span style="font-size:9px;background:'+t.color+'22;padding:1px 6px;border-radius:8px;border:1px solid '+t.color+'44;">'+t.tag+'</span></div>';
+
+    items.forEach(function(m) {
+      var cours   = m.metal === 'or' ? or : ag;
+      var isETF   = m.typeId === 'etf_or';
+      var valTot  = isETF ? m.prixAchat : (m.grammes / OZ * cours * m.qte);
+      var pv      = valTot - m.prixAchat;
+      var pvPct   = m.prixAchat ? pv / m.prixAchat * 100 : 0;
+      var pvCol   = pv >= 0 ? 'var(--green)' : 'var(--red)';
+      totalVal  += valTot;
+      totalPrix += m.prixAchat;
+
+      // Exoneration fiscale
+      var exoStr = '';
+      if (m.fiscalExo) {
+        var yrAchat = m.dateAchat ? new Date(m.dateAchat).getFullYear() : 2026;
+        var yrExo   = yrAchat + m.fiscalExo;
+        var now     = new Date().getFullYear();
+        var yrsDone = Math.min(m.fiscalExo, Math.max(0, now - yrAchat));
+        var pctExo  = Math.round(yrsDone / m.fiscalExo * 100);
+        exoStr = '<div style="margin-top:8px;">'
+          + '<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-bottom:3px;">'
+          + '<span>⚖️ Exo fiscale ('+m.fiscalExo+' ans)</span>'
+          + '<span>'+(now>=yrExo?'✅ Exonere':'Exo en '+yrExo+' · '+pctExo+'%')+'</span></div>'
+          + '<div style="height:4px;background:var(--bd);border-radius:2px;">'
+          + '<div style="width:'+pctExo+'%;height:100%;background:'+t.color+';border-radius:2px;"></div></div></div>';
+      } else {
+        exoStr = '<div style="font-size:9px;color:var(--muted);margin-top:6px;">⚖️ PFU 30% a la revente · Pas d\'exoneration 22 ans</div>';
+      }
+
+      html += '<div style="background:var(--s2);border-radius:10px;padding:14px;border-left:3px solid '+t.color+';margin-bottom:8px;">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">';
+      html += '<div style="flex:1;">';
+      html += '<div style="font-weight:700;font-size:13px;">'+t.emoji+' '+m.label+'</div>';
+      html += '<div style="font-size:10px;color:var(--muted);font-family:JetBrains Mono,monospace;margin-top:2px;">';
+      if (!isETF) html += m.qte+' pièce'+(m.qte>1?'s':'')+' · '+(m.grammes||0)+'g/u · '+(m.grammes*m.qte).toFixed(2)+'g total · ';
+      html += (m.dateAchat||'');
+      if (m.note) html += ' · '+m.note;
+      html += '</div>';
+      if (m.tva) html += '<div style="font-size:9px;color:#e07b39;margin-top:2px;">⚠️ TVA 20% incluse</div>';
+      html += '</div>';
+      html += '<div style="text-align:right;flex-shrink:0;">';
+      html += '<div style="font-size:16px;font-weight:700;color:'+t.color+';">'+Math.round(valTot).toLocaleString('fr')+' €</div>';
+      html += '<div style="font-size:10px;color:'+pvCol+';">'+(pv>=0?'+':'')+Math.round(pv).toLocaleString('fr')+' € ('+pvPct.toFixed(1)+'%)</div>';
+      html += '<div style="font-size:9px;color:var(--muted);">Achat : '+Math.round(m.prixAchat).toLocaleString('fr')+' €</div>';
+      html += '</div></div>';
+      html += exoStr;
+      html += '<div style="margin-top:8px;text-align:right;">'
+        + '<button data-mid="'+m.id+'" onclick="supprimerMetal(this.dataset.mid)" style="font-size:10px;background:none;border:none;color:var(--muted);cursor:pointer;">🗑 Supprimer</button></div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+
+  el.innerHTML = html;
+
+  // Totaux
+  var pv = totalVal - totalPrix;
+  var set = function(id,v,col) { var e=document.getElementById(id); if(e){ e.textContent=v; if(col) e.style.color=col; } };
+  set('metal-total-val', Math.round(totalVal).toLocaleString('fr')+' €');
+  set('metal-total-pv', 'PV : '+(pv>=0?'+':'')+Math.round(pv).toLocaleString('fr')+' €', pv>=0?'var(--green)':'var(--red)');
+}
+window._renderMetaux = _renderMetaux;
+
+// Init au chargement
+window.addEventListener('load', function() {
+  setTimeout(function() { fetchCoursMetaux(); }, 1500);
+});
+
 var SIGNATURE_BAILLEUR_B64 = "data:image/png;base64,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";
 
 // ══════════════════════════════════════════════════════════════
@@ -20866,6 +21313,7 @@ window.genererQuittancePDF = genererQuittancePDF;
     setTimeout(initQuittance, 800);
   }
 })();
+
 
 } catch(e) {
         console.warn('[showPage dispatcher]', id, e);
