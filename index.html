@@ -688,6 +688,7 @@ body {
   </div>
   <div id="header-page-title" style="display:none;font-family:'Playfair Display',serif;font-size:15px;font-weight:600;color:var(--text);flex:1;text-align:center;"></div>
   <div class="hdr-right">
+
     <div class="theme-picker" title="Changer de thème">
       <button class="theme-btn t-dark  active" data-theme=""       title="Sombre"></button>
       <button class="theme-btn t-light"         data-theme="light"  title="Clair"></button>
@@ -706,6 +707,7 @@ body {
   <button class="nb" data-page="enveloppes">💼 Enveloppes</button>
   <button class="nb" data-page="immo">🏘 Immobilier</button>
   <button class="nb" data-page="livrets">💰 Livrets</button>
+  <button class="nb" data-page="metaux">🥇 Métaux</button>
   <button class="nb" data-page="charts">📊 Graphiques</button>
   <button class="nb" data-page="analyse">🔬 Analyse</button>
   <button class="nb" data-page="fiscalite">⚖️ Fiscalité</button>
@@ -799,7 +801,7 @@ body {
     <div class="chd" style="justify-content:space-between;">
       <span>&#129302; Vesta — Conseil patrimonial</span>
       <div style="display:flex;gap:6px;">
-        <button class="btn sm" id="btn-ia-quick" style="background:linear-gradient(135deg,#5b8dee,#9b72cf);color:#fff;font-size:11px;" onclick="lancerConseilRapide()">Actualiser</button>
+        <button class="btn sm" id="btn-ia-quick" style="background:linear-gradient(135deg,#5b8dee,#9b72cf);color:#fff;font-size:11px;" onclick="exporterRapportMensuel()">📋 Rapport mensuel</button>
         <button class="btn gh sm" style="font-size:11px;" onclick="ouvrirModalIA()">Chat complet</button>
       </div>
     </div>
@@ -1467,13 +1469,31 @@ body {
   </div>
   <div class="card"><div id="livrets-tbl"></div></div>
 
-  <!-- ════ MÉTAUX PRÉCIEUX ════ -->
+</div>
+
+
+<!-- ══════════ MÉTAUX PRÉCIEUX ══════════ -->
+<div id="pg-metaux" class="pg">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+    <div>
+      <h1 style="font-family:'Playfair Display',serif;font-size:20px;">🥇 Métaux précieux</h1>
+      <p style="color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace;margin-top:2px;">
+        Or physique · Bullion Marianne · Argent · ETF Or · Cours temps réel
+      </p>
+    </div>
+  </div>
+
+<!-- ════ MÉTAUX PRÉCIEUX ════ -->
   <div class="card mb" style="margin-top:18px;">
     <div class="chd" style="justify-content:space-between;align-items:center;">
       <span>🥇 Métaux précieux
         <span class="chd-sub">Or · Argent · Cours en temps réel</span>
       </span>
-      <button class="btn sm" onclick="ajouterMetal()" style="font-size:11px;">+ Ajouter</button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="metal-refresh-status" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--muted);">—</span>
+        <button class="btn gh sm" onclick="fetchCoursMetaux(true)" style="font-size:10px;padding:4px 8px;">↻ Actualiser</button>
+        <button class="btn sm" onclick="ajouterMetal()" style="font-size:11px;">+ Ajouter</button>
+      </div>
     </div>
 
     <!-- Cours actuels -->
@@ -1496,8 +1516,9 @@ body {
     </div>
 
     <div id="metaux-list"></div>
-    <div style="font-size:9px;color:var(--muted);margin-top:8px;font-family:'JetBrains Mono',monospace;">
-      Cours récupérés via API gratuite · Actualisation manuelle · Exonération PV après 22 ans de détention
+    <div style="font-size:9px;color:var(--muted);margin-top:8px;font-family:'JetBrains Mono',monospace;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;">
+      <span>Sources : gold-api.com → metals.dev → frankfurter.app · Auto-refresh 5 min</span>
+      <span>⚖️ Exonération PV après 22 ans (physique) · PFU 30% pour ETF or</span>
     </div>
   </div>
 
@@ -1598,6 +1619,12 @@ body {
     <button class="btn gh sm" id="btn-pdf2">⬇ Export PDF</button>
   </div>
 
+  <!-- Card englobante : inputs + milestones + progression = sous-onglet actif -->
+  <div class="card mb" id="card-retraite-active" style="border-left:3px solid var(--green);">
+
+  <div class="chd" style="margin-bottom:14px;">🎯 Progression vers l'objectif retraite 2057</div>
+  <div id="progression-retraite-content" style="min-height:60px;margin-bottom:16px;"></div>
+
   <div class="ri-grid">
     <div class="ri"><label>Âge actuel</label><input type="number" id="r-age" value="29"></div>
     <div class="ri"><label>Âge de départ retraite</label><input type="number" id="r-ret" value="60"></div>
@@ -1623,11 +1650,7 @@ body {
 
   <div class="g3 mb" id="milestones"></div>
 
-  <!-- Jauge progression retraite -->
-  <div class="card mb" id="card-progression-retraite" style="border-left:3px solid var(--green);">
-    <div class="chd">🎯 Progression vers l'objectif retraite 2057</div>
-    <div id="progression-retraite-content" style="min-height:80px;"></div>
-  </div>
+  </div><!-- /card-retraite-active -->
 
   <!-- Revenus projetés à la retraite -->
   <div class="card mb">
@@ -2421,6 +2444,78 @@ body {
     </div>
   </div>
 
+  <!-- Méthode radar small caps -->
+  <div class="card mb" id="card-methode-radar" style="border-left:3px solid #f97316;">
+    <div class="chd" onclick="toggleAccordion('radar')" style="cursor:pointer;user-select:none;justify-content:space-between;">
+      <span>🎯 Radar small caps — Méthode de détection
+        <span class="chd-sub">Critères pour repérer le prochain Nvidia / Apple</span>
+      </span>
+      <span id="radar-icon" style="font-size:14px;color:var(--muted);">▸</span>
+    </div>
+    <div id="radar-body" style="display:none;padding-top:8px;">
+      <div style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:14px;">
+        Vesta ne peut pas récupérer les données financières en temps réel sans API payante. Voici ta <b>méthode de détection</b> à appliquer avec les outils gratuits ci-dessous.
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:14px;">
+
+        <div style="background:var(--s2);border-radius:8px;padding:12px;border-left:2px solid var(--green);">
+          <div style="font-weight:700;font-size:12px;color:var(--green);margin-bottom:6px;">📈 Fondamentaux croissance</div>
+          <div style="font-size:10px;line-height:1.7;color:var(--muted);">
+            · Chiffre d'affaires en hausse régulière<br>
+            · EBITDA positif et croissant<br>
+            · Résultat net stable ou en hausse<br>
+            · BNA (bénéfice/action) croissant<br>
+            · Dividendes en hausse régulière
+          </div>
+        </div>
+
+        <div style="background:var(--s2);border-radius:8px;padding:12px;border-left:2px solid var(--gold);">
+          <div style="font-weight:700;font-size:12px;color:var(--gold);margin-bottom:6px;">💰 Valorisation</div>
+          <div style="font-size:10px;line-height:1.7;color:var(--muted);">
+            · PER &lt; 15 = attractif<br>
+            · PER 15-20 = correct<br>
+            · PER &gt; 20 = surévalué<br>
+            · ROE &gt; 10% bon, &gt;20% excellent<br>
+            · Marges stables ou en hausse
+          </div>
+        </div>
+
+        <div style="background:var(--s2);border-radius:8px;padding:12px;border-left:2px solid var(--blue);">
+          <div style="font-weight:700;font-size:12px;color:var(--blue);margin-bottom:6px;">💵 Trésorerie</div>
+          <div style="font-size:10px;line-height:1.7;color:var(--muted);">
+            · Free Cash Flow positif et croissant<br>
+            · Faible endettement<br>
+            · Capacité d'autofinancement solide
+          </div>
+        </div>
+
+        <div style="background:var(--s2);border-radius:8px;padding:12px;border-left:2px solid #9b72cf;">
+          <div style="font-weight:700;font-size:12px;color:#9b72cf;margin-bottom:6px;">📊 Technique (point d'entrée)</div>
+          <div style="font-size:10px;line-height:1.7;color:var(--muted);">
+            · Cours &gt; EMA 100 &amp; 200 = haussier ✅<br>
+            · Cours &lt; EMA longues = attendre<br>
+            · GF Value : viser -20% sous-évalué<br>
+            · Patience sur le prix d'achat
+          </div>
+        </div>
+
+      </div>
+
+      <div style="background:rgba(249,115,22,0.08);border:1px solid #f9731633;border-radius:8px;padding:10px 12px;font-size:11px;line-height:1.6;color:var(--text);margin-bottom:12px;">
+        <b>⚠️ Règle d'or :</b> même une entreprise excellente fondamentalement, si son cours chute depuis des années (ex. Pernod Ricard, Nexity), <b>attends le retournement</b>. Achète quand les fondamentaux sont solides ET que le cours repasse au-dessus des moyennes mobiles.
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="https://www.gurufocus.com" target="_blank" class="btn sm" style="text-decoration:none;background:var(--s2);">🔍 GuruFocus (GF Value)</a>
+        <a href="https://www.tradingview.com" target="_blank" class="btn sm" style="text-decoration:none;background:var(--s2);">📊 TradingView (EMA)</a>
+        <a href="https://www.zonebourse.com" target="_blank" class="btn sm" style="text-decoration:none;background:var(--s2);">🔵 Zonebourse (fondamentaux)</a>
+        <button onclick="exporterRapportMensuel()" class="btn sm" style="background:var(--gold);color:#1a1a2e;font-weight:700;">📋 Analyse via Claude.ai</button>
+      </div>
+    </div>
+  </div>
+
+
   <!-- Critères de recherche enrichis -->
   <div class="card mb">
     <div class="chd">⚙️ Critères de recherche <span class="chd-sub">15 filtres · Scoring adapté à ton profil SNCF/PEA</span></div>
@@ -2678,14 +2773,17 @@ body {
       <button class="btn sm" id="btn-refresh-actu">⟳ Actualiser</button>
     </div>
   </div>
-  <!-- Résumé marché IA -->
+  <!-- Synthèse patrimoniale locale (sans API) -->
 <div class="card mb" id="card-marche-resume" style="border-left:3px solid var(--blue);">
   <div class="chd" style="justify-content:space-between;">
-    <span>&#128202; Résumé marché & préconisations <span class="chd-sub">Généré par Vesta · Corrélé à vos actifs</span></span>
-    <button class="btn sm" id="btn-marche-refresh" onclick="genererResumeMarche()" style="font-size:11px;">&#8635; Actualiser</button>
+    <span>&#128202; Synthèse & préconisations <span class="chd-sub">Calculé localement · Corrélé à vos actifs</span></span>
+    <button class="btn sm" onclick="genererSyntheseLocale()" style="font-size:11px;">&#8635; Recalculer</button>
   </div>
   <div id="marche-resume-content" style="font-size:12px;color:var(--muted);line-height:1.7;min-height:80px;">
-    Cliquez "Actualiser" pour obtenir un résumé du marché et des préconisations personnalisées.
+    <div style="text-align:center;padding:16px;color:var(--muted);">Chargement de la synthèse...</div>
+  </div>
+  <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);text-align:center;">
+    <button class="btn" onclick="exporterRapportMensuel()" style="background:var(--gold);color:#1a1a2e;font-weight:700;font-size:11px;">📋 Analyse complète via Claude.ai</button>
   </div>
 </div>
 
@@ -6574,17 +6672,29 @@ function cAll() {
   S.livrets.forEach(function(l){livT+=l.balance;livI+=l.balance*l.rate/100;});
   var immoNet=immoV-immoDbt;          // locatif net
   var rpNet=immoRPV-immoRPDbt;        // RP net (quote-part)
-  var total=bourse+immoNet+rpNet+livT; // RP compte dans le patrimoine total
+  // Valeur totale métaux précieux
+  var metauxT = 0;
+  if (S.metaux && S.metaux.length) {
+    var OZ_m = 31.1035;
+    var orPx = (window._coursMetaux && window._coursMetaux.or) || 3900;
+    var agPx = (window._coursMetaux && window._coursMetaux.argent) || 36;
+    S.metaux.forEach(function(m) {
+      if (m.typeId === 'etf_or') { metauxT += m.prixAchat || 0; }
+      else { metauxT += (m.grammes||0) / OZ_m * (m.metal==='or'?orPx:agPx) * (m.qte||1); }
+    });
+  }
+  var total=bourse+immoNet+rpNet+livT+metauxT; // + métaux
   // Patrimoine BRUT = valeur marchande de tout (immo + financier)
   var immoBrut    = immoV + immoRPV;          // T2 brut + RP brut QP
   var detteTotale = immoDbt + immoRPDbt;       // toutes dettes immo QP
-  var patriBrut   = immoBrut + bourse + livT;  // valeur marché totale
+  var patriBrut   = immoBrut + bourse + livT + metauxT;  // valeur marché totale
   var patriNet    = patriBrut - detteTotale;   // après déduction dettes
   // total (ancienne valeur nette — rétrocompat)
   return {pea,av,peg,cto,bourse,binv,peaInv,avInv,pegInv,
           immoV,immoL,immoDbt,immoNet,immoRPV,immoRPDbt,rpNet,
           immoYield:immoV?immoL/immoV*100:0,
           livT,livI,livRate:livT?livI/livT*100:0,
+          metauxT,
           immoBrut,detteTotale,patriBrut,patriNet,
           total:patriNet};  // total = patrimoine net (référence pour les scores)
 }
@@ -8116,7 +8226,8 @@ function renderDonut(c){
     {v:c.cto,     c:'#5b8dee',l:'CTO'},
     {v:c.immoV,   c:'#9b72cf',l:'LMNP T2'},
     {v:c.immoRPV, c:'#7b9ee0',l:'RP (maison)'},
-    {v:c.livT,    c:'#52c97a',l:'Livrets'}
+    {v:c.livT,    c:'#52c97a',l:'Livrets'},
+    {v:c.metauxT, c:'#c9a84c',l:'Metaux physique'}
   ].filter(function(s){return s.v>0;});
   // segTotal = somme des segments → garantit exactement 100%
   var segTotal=segs.reduce(function(a,s){return a+s.v;},0);
@@ -8590,7 +8701,7 @@ function renderCharts(){
   // ── Main pie ──
   var ms=[];
   if(pieView==='env'){
-    var envMap={'PEA':c.pea,'AV':c.av,'PEG':c.peg,'CTO':c.cto,'LMNP T2':c.immoV,'RP (maison)':c.immoRPV,'Livrets':c.livT};
+    var envMap={'PEA':c.pea,'AV':c.av,'PEG':c.peg,'CTO':c.cto,'LMNP T2':c.immoV,'RP (maison)':c.immoRPV,'Livrets':c.livT,'Métaux physiques':c.metauxT||0};
     Object.keys(envMap).forEach(function(k,i){if(envMap[k]>0)ms.push({label:k,val:envMap[k],color:EC[k]||col(i)});});
 
   } else if(pieView==='class'){
@@ -8607,6 +8718,7 @@ function renderCharts(){
       {label:'ETF / UC Actions',      val:etfVal, color:'#d4a853'},
       {label:'Fonds euros',            val:feVal,  color:'#52c97a'},
       {label:'Or ETC',                 val:orVal,  color:'#f0d060'},
+      {label:'Métaux physiques',       val:c.metauxT||0, color:'#c9a84c'},
       {label:'PEG SNCF',              val:pegVal, color:'#e07a5b'},
       {label:'Immobilier net',         val:c.immoNet, color:'#9b72cf'},
       {label:'Livrets & Épargne',     val:c.livT, color:'#4ecdc4'},
@@ -8623,6 +8735,7 @@ function renderCharts(){
     // Immo + Livrets = France
     if(c.immoNet>0) geoMap['France']=(geoMap['France']||0)+c.immoNet;
     if(c.livT>0)    geoMap['France']=(geoMap['France']||0)+c.livT;
+    if(c.metauxT>0) geoMap['Or / Matières premières']=(geoMap['Or / Matières premières']||0)+c.metauxT;
     var geoColors={'États-Unis / S&P500':'#e07a5b','Monde / MSCI World':'#5b8dee','Marchés émergents':'#f0d060','Europe / Mid-Cap':'#57b5eb','Or / Matières premières':'#c8a96e','France (Immo)':'#9b72cf','France (Livrets)':'#52c97a','France':'#52c97a','PEG SNCF':'#d4a853','Non classifié':'#5a6478'};
     var gi=0;
     Object.keys(geoMap).forEach(function(k){if(geoMap[k]>0)ms.push({label:k,val:geoMap[k],color:geoColors[k]||col(gi++)});});
@@ -8633,6 +8746,13 @@ function renderCharts(){
     S.positions.forEach(function(p){ms.push({label:p.name,val:posVal(p),color:col(idx++)});});
     S.immo.forEach(function(b){ms.push({label:b.name,val:b.valeur-b.debt,color:col(idx++)});});
     S.livrets.forEach(function(l){ms.push({label:l.name,val:l.balance,color:col(idx++)});});
+    if(S.metaux) S.metaux.forEach(function(m){
+      var OZ_m=31.1035;
+      var orPx=(window._coursMetaux&&window._coursMetaux.or)||3900;
+      var agPx=(window._coursMetaux&&window._coursMetaux.argent)||36;
+      var v=m.typeId==='etf_or'?m.prixAchat:(m.grammes||0)/OZ_m*(m.metal==='or'?orPx:agPx)*(m.qte||1);
+      if(v>0) ms.push({label:m.label,val:v,color:'#c9a84c'});
+    });
   }
   var pieTotal=ms.reduce(function(a,s){return a+s.val;},0)||1;
   drawPie('c-mpie',ms,pieTotal,'mp-v','mp-n','mp-p','leg-mpie');
@@ -10506,29 +10626,6 @@ var ACTU_FEEDS = [
     sources:['boursorama.com','lesechos.fr','capital.fr','investir.lesechos.fr']
   },
   {
-    id:'pea', label:'PEA', color:'#d4a85388', icon:'💼',
-    tag:'PEA',
-    alert_keywords:['suppression PEA','réforme PEA','plafond PEA','fiscalité PEA'],
-    queries:[
-      'PEA Plan Épargne Actions 2025 actualité',
-      'PEA fiscalité évolution réforme',
-      'plafond PEA modification loi'
-    ],
-    sources:['moneyvox.fr','boursorama.com','cbanque.com']
-  },
-  {
-    id:'av', label:'Assurance Vie', color:'#e07a5b', icon:'📄',
-    tag:'AV',
-    alert_keywords:['réforme assurance vie','flat tax','prélèvements sociaux','succession assurance vie'],
-    queries:[
-      'assurance vie actualité 2025',
-      'fonds euros taux 2025',
-      'Linxea Spirit assurance vie',
-      'fiscalité assurance vie succession réforme'
-    ],
-    sources:['moneyvox.fr','boursorama.com','capital.fr','fortuneo.fr']
-  },
-  {
     id:'immo', label:'Immobilier & LMNP', color:'#9b72cf', icon:'🏠',
     tag:'Immo',
     alert_keywords:['interdiction LMNP','réforme LMNP','DPE obligation','encadrement loyers','taxe foncière hausse'],
@@ -10542,43 +10639,66 @@ var ACTU_FEEDS = [
     sources:['bfmimmo.com','logic-immo.com','meilleurs-agents.com','capital.fr','service-public.fr']
   },
   {
-    id:'taux', label:'Taux & Crédit', color:'#5b8dee', icon:'🏦',
-    tag:'Crédit',
-    alert_keywords:['hausse taux','BCE relèvement','taux directeur','taux crédit immobilier hausse'],
+    id:'marches', label:'BFM Business — Marchés', color:'#e7273e', icon:'📺',
+    tag:'BFM',
+    direct_rss: 'https://www.bfmtv.com/rss/economie/finances-personnelles/',
+    alert_keywords:['krach','crise','chute','effondrement','record'],
     queries:[
-      'taux immobilier crédit 2025',
-      'BCE taux directeur décision',
-      'renégociation crédit immobilier',
-      'baromètre taux immobilier France'
+      'BFM Business bourse actions actualité',
+      'marchés financiers Europe Wall Street CAC40',
+      'économie France actualité finance'
     ],
-    sources:['meilleurstaux.com','pretto.fr','moneyvox.fr','banque-france.fr']
+    sources:['bfmtv.com','bfmbusiness.com']
   },
   {
-    id:'fiscal', label:'Fiscalité', color:'#52c97a', icon:'⚖️',
-    tag:'Fiscal',
-    alert_keywords:['hausse impôts','flat tax modification','prélèvements sociaux','barème IR','contribution exceptionnelle'],
+    id:'yahoo', label:'Yahoo Finance — France', color:'#6001d2', icon:'💹',
+    tag:'YF',
+    direct_rss: 'https://feeds.finance.yahoo.com/rss/2.0/headline?s=^FCHI&region=fr&lang=fr-FR',
+    alert_keywords:['chute','hausse','record','bilan'],
     queries:[
-      'fiscalité France réforme 2025',
-      'impôt revenu barème modification',
-      'prélèvements sociaux PFU flat tax',
-      'budget loi finances 2026 fiscalité'
+      'CAC 40 actualité bourse Paris',
+      'actions françaises cotation performance',
+      'marché obligataire taux OAT France'
     ],
-    sources:['impots.gouv.fr','legifrance.gouv.fr','capital.fr','lesechos.fr']
+    sources:['finance.yahoo.com']
   },
   {
-    id:'loi', label:'Lois & Amendements', color:'#4ecdc4', icon:'🏛️',
-    tag:'Loi',
-    alert_keywords:['amendement','sénat vote','assemblée nationale','projet de loi','loi finances','article budget'],
-    queries:[
-      'projet loi finances amendement sénat 2025',
-      'assemblée nationale fiscalité patrimoine vote',
-      'sénat loi immobilier locatif amendement',
-      'projet loi épargne investissement 2025',
-      'réforme fiscale amendement 2025 2026'
-    ],
-    sources:['senat.fr','assemblee-nationale.fr','legifrance.gouv.fr','lefigaro.fr','lesechos.fr']
+    id:'figaro', label:'Le Figaro — Économie', color:'#cc0000', icon:'📰',
+    tag:'Figaro',
+    direct_rss: 'https://www.lefigaro.fr/rss/figaro_economie.xml',
+    alert_keywords:['crise','récession','faillite','effondrement','record'],
+    queries:['économie France bourse investissement lefigaro'],
+    sources:['lefigaro.fr']
+  },,
+  {
+    id:'figaro_immo', label:'Le Figaro Immobilier', color:'#b22222', icon:'🏠',
+    tag:'FigaroImmo',
+    direct_rss: 'https://immobilier.lefigaro.fr/rss/actualites.xml',
+    alert_keywords:['chute prix','bulle immobilière','krach immo','DPE interdiction','hausse loyers'],
+    queries:['immobilier France prix marché location achat lefigaro'],
+    sources:['immobilier.lefigaro.fr']
   },
-];
+  {
+    id:'or_marche', label:'Or & Métaux précieux', color:'#c9a84c', icon:'🥇',
+    tag:'Or',
+    alert_keywords:['or record','or hausse','or baisse','XAU USD'],
+    queries:[
+      'cours or aujourd hui prix once gramme',
+      'argent métal précieux actualité',
+      'Marianne or Monnaie de Paris bullion 2026',
+      'or investissement risque géopolitique'
+    ],
+    sources:['kitco.com','gold.fr','boursorama.com']
+  },
+,
+  {
+    id:'zonebourse', label:'Zonebourse — Marches', color:'#2563eb', icon:'🔵',
+    tag:'ZB',
+    direct_rss: 'https://www.zonebourse.com/rss/actualites/',
+    alert_keywords:['krach','alerte','chute','record'],
+    queries:['bourse Paris CAC40 actions france marche'],
+    sources:['zonebourse.com']
+  }];
 
 
 var _actuFeedCache={};
@@ -10703,13 +10823,110 @@ async function fetchActuFeed(query) {
   return [];
 }
 
-async function fetchOneFeed(feed){
-  for(var qi=0;qi<feed.queries.length;qi++){
-    var res=await fetchActuFeed(feed.queries[qi]);
-    if(res.length>=3)return res.slice(0,5);
-    if(res.length>0&&qi===feed.queries.length-1)return res.slice(0,5);
+// ── Parser RSS XML → items ─────────────────────────────────
+function parseRSSItems(xmlText, max) {
+  try {
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(xmlText, 'text/xml');
+    var items = doc.querySelectorAll('item');
+    if (!items.length) items = doc.querySelectorAll('entry'); // Atom
+    var result = [];
+    var now = Date.now();
+    var twoMonthsAgo = now - 60 * 24 * 3600 * 1000;
+
+    items.forEach(function(item) {
+      if (result.length >= (max || 6)) return;
+
+      var title = (item.querySelector('title') || {}).textContent || '';
+      title = title.replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+      if (!title) return;
+
+      var link = '';
+      var linkEl = item.querySelector('link');
+      if (linkEl) {
+        link = linkEl.textContent || linkEl.getAttribute('href') || '';
+        link = link.trim();
+      }
+
+      var pubDateStr = (item.querySelector('pubDate') || item.querySelector('published') || item.querySelector('updated') || {}).textContent || '';
+      var pubDate = pubDateStr ? new Date(pubDateStr) : new Date();
+      if (isNaN(pubDate.getTime())) pubDate = new Date();
+
+      // Filtrer > 2 mois
+      if (pubDate.getTime() < twoMonthsAgo) return;
+
+      var ageDays = Math.floor((now - pubDate.getTime()) / 86400000);
+      var ageLabel = ageDays === 0 ? "Aujourd'hui"
+        : ageDays === 1 ? "Il y a 1 jour"
+        : ageDays < 7   ? "Il y a " + ageDays + " jours"
+        : ageDays < 30  ? "Il y a " + Math.floor(ageDays/7) + " sem."
+        : "Il y a " + Math.floor(ageDays/30) + " mois";
+
+      var source = (item.querySelector('source') || {}).textContent || '';
+      if (!source) {
+        // Extraire depuis le lien
+        try { source = new URL(link).hostname.replace('www.',''); } catch(e) {}
+      }
+
+      result.push({
+        title:    title,
+        link:     link || '#',
+        source:   source || 'RSS',
+        ageDays:  ageDays,
+        ageLabel: ageLabel,
+        dateObj:  pubDate,
+        pubDate:  pubDate.toLocaleDateString('fr-FR', {day:'2-digit', month:'short'})
+      });
+    });
+    return result;
+  } catch(e) {
+    return [];
   }
-  return[];
+}
+
+// ── Proxies CORS pour RSS ──────────────────────────────────
+var RSS_PROXIES = [
+  function(u){ return 'https://corsproxy.io/?' + encodeURIComponent(u); },
+  function(u){ return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); },
+  function(u){ return 'https://thingproxy.freeboard.io/fetch/' + u; },
+  function(u){ return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); },
+];
+
+// Fetch une URL RSS via proxies en cascade
+async function fetchRSSUrl(rssUrl) {
+  for (var pi = 0; pi < RSS_PROXIES.length; pi++) {
+    try {
+      var ctrl = new AbortController();
+      var tid = setTimeout(function(){ ctrl.abort(); }, 8000);
+      var r = await fetch(RSS_PROXIES[pi](rssUrl), { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (!r.ok) continue;
+      var txt = await r.text();
+      if (!txt || txt.trim().length < 50) continue;
+      var items = parseRSSItems(txt, 6);
+      if (items && items.length > 0) return items;
+    } catch(e) { /* continuer */ }
+  }
+  return [];
+}
+
+async function fetchOneFeed(feed) {
+  // ── 1. RSS direct du site (BFM, Figaro, Yahoo...) ──────
+  if (feed.direct_rss) {
+    var items = await fetchRSSUrl(feed.direct_rss);
+    if (items && items.length >= 2) return items.slice(0, 6);
+  }
+
+  // ── 2. Fallback : Google News RSS + proxies ─────────────
+  for (var qi = 0; qi < (feed.queries||[]).length; qi++) {
+    var gnUrl = 'https://news.google.com/rss/search?q='
+      + encodeURIComponent(feed.queries[qi])
+      + '&hl=fr&gl=FR&ceid=FR:fr';
+    var res = await fetchRSSUrl(gnUrl);
+    if (res.length >= 3) return res.slice(0, 5);
+    if (res.length > 0 && qi === feed.queries.length - 1) return res.slice(0, 5);
+  }
+  return [];
 }
 
 async function renderFeedCard(feedId,forceRefresh){
@@ -11287,62 +11504,7 @@ function renderTRI() {
 window.renderTRI = renderTRI;
 
 // ══ RÉSUMÉ MARCHÉ ════════════════════════════════════════════
-async function genererResumeMarche() {
-  var el = document.getElementById('marche-resume-content');
-  var btn = document.getElementById('btn-marche-refresh');
-  if (!el) return;
-  el.innerHTML = '<span style="color:var(--muted);">&#129302; Vesta analyse les marchés...</span>';
-  if (btn) btn.disabled = true;
-
-  var S = window._pState ? window._pState() : null;
-  var c = window._cAll ? window._cAll() : {};
-  var NL = String.fromCharCode(10);
-
-  // Build portfolio summary for context
-  var actifs = [];
-  if (S && S.positions) {
-    S.positions.forEach(function(p) { actifs.push(p.name + ' (' + p.envelope + ')'); });
-  }
-  if (S && S.immo) {
-    S.immo.forEach(function(b) { actifs.push(b.name + ' (' + b.type + ')'); });
-  }
-
-  var today = new Date();
-  var mois = today.toLocaleDateString('fr-FR', {month:'long', year:'numeric'});
-
-  var userMsg = [
-    "Date actuelle : " + today.toLocaleDateString('fr-FR'),
-    "Actifs de Maxime : " + actifs.join(', '),
-    "",
-    "En te basant sur les tendances generales des marches financiers et immobiliers en " + mois + " :",
-    "",
-    "1. ETAT DES MARCHES (5-6 lignes) : Indices boursiers mondiaux, tendance ETF MSCI World / S&P500, taux BCE, immobilier France",
-    "2. POINTS CLES DE LA SEMAINE/MOIS : 3 evenements importants qui impactent ses actifs",
-    "3. PRECONISATIONS (3 points concrets) : Ce qu'il devrait surveiller ou faire dans les 4 prochaines semaines",
-    "4. SIGNAL D'ALERTE (si pertinent) : Une chose urgente a ne pas ignorer",
-    "",
-    "Sois precis, chiffre quand possible, et toujours correle a SES actifs specifiques."
-  ].join(NL);
-
-  var response = await callClaudeIA(userMsg, true);
-
-  var html = response
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^#+\s+(.*)/gm, '<div style="font-weight:700;color:var(--blue);margin:10px 0 4px;font-size:13px;">$1</div>')
-    .replace(/^(\d+)\.\s+([A-Z\u00C0-\u00FF][^:]+:)/gm, '<div style="font-weight:700;color:var(--gold);margin:10px 0 4px;">$1. $2</div>')
-    .replace(/^- (.*)/gm, '<div style="padding:3px 0 3px 12px;border-left:2px solid var(--blue);margin:2px 0;font-size:11px;">$1</div>');
-  html = html.split('\n\n').join('<br>').split('\n').join(' ');
-
-  el.innerHTML = '<div style="line-height:1.8;">' + html + '</div>'
-    + '<div style="font-size:9px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px solid var(--bd);">'
-    + 'Vesta &mdash; Analyse au ' + today.toLocaleDateString('fr-FR') + ' &mdash; Basé sur les tendances connues, non sur des données temps réel'
-    + '</div>';
-
-  if (btn) btn.disabled = false;
-
-  // Also trigger regulatory watch
-  checkVeilleReglementaire();
-}
+async function genererResumeMarche() { }
 window.genererResumeMarche = genererResumeMarche;
 
 // ══ VEILLE RÉGLEMENTAIRE ══════════════════════════════════════
@@ -11441,9 +11603,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // Ressources critiques à mettre en cache au premier chargement
   var PRECACHE = [
     'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap',
-    'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
-    'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js',
-    'https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js',
   ];
 
   var swCode = `
@@ -13978,7 +14137,7 @@ try {
       var errUp = errMsg.toUpperCase();
 
       // 1. QUOTA / RATE LIMIT → rotation (jamais clé invalide)
-      var isRateErr = /rate.limit|Rate.limit|TPM|429|overloaded|RESOURCE_EXHAUSTED|quota|exceeded|billing|Provider returned error|upstream|503|502|504|TOO_MANY_REQUESTS/i.test(errMsg);
+      var isRateErr = /rate.limit|Rate.limit|TPM|429|overloaded|RESOURCE_EXHAUSTED|quota|exceeded|billing|Provider returned error|upstream|503|502|504|TOO_MANY_REQUESTS|key.*expired|expired.*key|API key expired/i.test(errMsg);
 
       // 2. Modèle indisponible → rotation
       var isModelErr2 = /No endpoints found|decommissioned|no longer supported|deprecated|not.*support/i.test(errMsg);
@@ -14649,176 +14808,140 @@ window.lancerConseilRapide = lancerConseilRapide;
 </script>
 
 
-<script>
-// ══ FIREBASE SECURE AUTH + SYNC ══════════════════════════════
-(function(){
-  var FB_CONFIG={
-    apiKey:"AIzaSyCk7gq4KXvI3FDbNfs22V1lzjVwg6jZuAo",
-    authDomain:"patritracker.firebaseapp.com",
-    databaseURL:"https://patritracker-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId:"patritracker",
-    storageBucket:"patritracker.firebasestorage.app",
-    messagingSenderId:"588310777550",
-    appId:"1:588310777550:web:4c5f69ea6e2a0f6fcf4a9f"
-  };
-  var _db=null,_uid=null,_sync=false,_lastHash=null,_ignoreNext=false,_saveTimer=null;
+<script type="module">
+// ══ FIREBASE SYNC — Module ESM (compatible GitHub Pages) ══
+import { initializeApp }              from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
-  function hashStr(s){var h=0;for(var i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return h.toString(36);}
-  function userRef(){return _db.ref('patritracker/state');}
+const FB_CONFIG = {
+  apiKey:            "AIzaSyCk7gq4KXvI3FDbNfs22V1lzjVwg6jZuAo",
+  authDomain:        "patritracker.firebaseapp.com",
+  databaseURL:       "https://patritracker-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "patritracker",
+  storageBucket:     "patritracker.firebasestorage.app",
+  messagingSenderId: "1019890504270",
+  appId:             "1:1019890504270:web:ca5afab8d3d7a62f4d7f1d"
+};
 
-  function pushToFirebase(){
-    window._fbPush=pushToFirebase;
-    if(!_sync||!_uid)return;
-    var S=window._pState?window._pState():null;if(!S)return;
-    var data=JSON.parse(JSON.stringify(S));
-    var tsVal=Date.now();
-    var h=hashStr(JSON.stringify(data));
-    if(h===_lastHash)return;
-    _lastHash=h;data._ts=tsVal;
-    var raw=JSON.stringify(data);
-    try{localStorage.setItem('patrimoine_v8',raw);}catch(e){}
-    _ignoreNext=true;updateSyncUI('synced');
-    userRef().set({data:raw,ts:tsVal,hash:h})
-      .then(function(){updateSyncUI('connected');})
-      .catch(function(){updateSyncUI('error');});
-  }
-  window._fbPush=pushToFirebase;
+const _app  = initializeApp(FB_CONFIG);
+const _auth = getAuth(_app);
+const _db2  = getDatabase(_app);
 
-  function applyRemote(raw){
-    try{
-      var parsed=JSON.parse(raw);
-      localStorage.setItem('patrimoine_v8',raw);
-      var S=window._pState?window._pState():null;
-      if(S){Object.keys(parsed).forEach(function(k){S[k]=parsed[k];});['positions','immo','livrets','history','snapshots','actionsDone','pegRoulement'].forEach(function(k){if(!S[k])S[k]=[];});}
-      if(window._app&&window._app.renderAll)window._app.renderAll();
-      window._toast&&window._toast('Donnees synchronisees');
-    }catch(e){}
-  }
-
-  function startSync(){
-    userRef().once('value').then(function(snap){
-      var val=snap.val();
-      if(val&&val.data){
-        var localRaw=localStorage.getItem('patrimoine_v8'),localTs=0;
-        try{localTs=JSON.parse(localRaw)._ts||0;}catch(e){}
-        if(!localRaw||val.ts>localTs+5000){_lastHash=val.hash||hashStr(val.data);applyRemote(val.data);}
-        else{var tmp=JSON.parse(localRaw);delete tmp._ts;_lastHash=hashStr(JSON.stringify(tmp));pushToFirebase();}
-      } else {pushToFirebase();}
-      updateSyncUI('connected');
-    });
-    userRef().on('value',function(snap){
-      if(_ignoreNext){_ignoreNext=false;return;}
-      var val=snap.val();if(!val||!val.data)return;
-      var h=val.hash||hashStr(val.data);if(h===_lastHash)return;
-      _lastHash=h;applyRemote(val.data);updateSyncUI('received');
-      setTimeout(function(){updateSyncUI('connected');},1500);
-    });
-  }
-
-  function createSyncUI(){
-    var el=document.createElement('div');
-    el.id='fb-sync-indicator';
-    el.style.cssText='display:flex;align-items:center;gap:5px;font-family:JetBrains Mono,monospace;font-size:10px;color:var(--muted);cursor:pointer;padding:4px 8px;border-radius:6px;user-select:none;flex-shrink:0;';
-    el.innerHTML='<span id="fb-dot" style="width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s;"></span><span id="fb-lbl">...</span>';
-    el.title='Firebase sync - clic pour forcer';
-    el.addEventListener('click',function(){pushToFirebase();window._toast&&window._toast('Sync forcee...');});
-    var logoutBtn=document.createElement('button');
-    logoutBtn.className='btn gh sm';logoutBtn.style.cssText='font-size:10px;padding:4px 8px;flex-shrink:0;display:none;';
-    logoutBtn.id='fb-logout-btn';logoutBtn.textContent='Deconnexion';
-    logoutBtn.addEventListener('click',function(){firebase.auth().signOut().then(function(){setTimeout(function(){location.reload();},500);});});
-    var hdr=document.querySelector('.hdr-right');
-    if(hdr){hdr.insertBefore(el,hdr.firstChild);hdr.insertBefore(logoutBtn,hdr.firstChild);}
-  }
-
-  function updateSyncUI(state){
-    var dot=document.getElementById('fb-dot'),lbl=document.getElementById('fb-lbl');
-    var logout=document.getElementById('fb-logout-btn');
-    if(!dot||!lbl)return;
-    var map={connecting:['var(--muted)','...'],connected:['var(--green)','sync OK'],synced:['var(--gold)','envoi...'],received:['var(--blue)','reception...'],error:['var(--red)','hors-ligne']};
-    var s=map[state]||map.connecting;
-    dot.style.background=s[0];lbl.textContent=s[1];
-    if(logout)logout.style.display=(state==='error')?'none':'inline-flex';
-  }
-
-  // Login overlay using DOM (no string injection)
-  function createLoginOverlay(){
-    var ov=document.createElement('div');
-    ov.id='fb-login-overlay';
-    ov.style.cssText='position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;';
-    var title=document.createElement('div');
-    title.style.cssText='font-family:"Playfair Display",serif;font-size:32px;color:var(--gold);';
-    title.textContent='Vesta';
-    var box=document.createElement('div');
-    box.style.cssText='background:var(--s1);border:1px solid var(--bd);border-radius:16px;padding:32px 36px;text-align:center;max-width:340px;width:90%;';
-    var lock=document.createElement('div');lock.style.fontSize='28px';lock.style.marginBottom='12px';lock.textContent='🔒';
-    var h=document.createElement('div');h.style.cssText='font-size:15px;font-weight:600;margin-bottom:6px;';h.textContent='Acces prive';
-    var sub=document.createElement('div');sub.style.cssText='font-size:12px;color:var(--muted);margin-bottom:24px;line-height:1.5;';sub.textContent='Connectez-vous avec votre compte Google.';
-    var gbtn=document.createElement('button');
-    gbtn.id='fb-google-btn';
-    gbtn.style.cssText='display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 20px;border-radius:10px;border:1px solid var(--bd);background:var(--s2);color:var(--text);font-size:14px;font-weight:500;cursor:pointer;';
-    gbtn.innerHTML='<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Continuer avec Google';
-    var errEl=document.createElement('div');errEl.id='fb-login-error';errEl.style.cssText='margin-top:12px;font-size:11px;color:var(--red);display:none;';
-    gbtn.addEventListener('click',function(){
-      gbtn.disabled=true;gbtn.textContent='Connexion...';
-      var provider=new firebase.auth.GoogleAuthProvider();
-      firebase.auth().signInWithPopup(provider).catch(function(e){
-        gbtn.disabled=false;gbtn.textContent='Reessayer';
-        errEl.style.display='block';errEl.textContent='Erreur : '+e.message;
-      });
-    });
-    box.appendChild(lock);box.appendChild(h);box.appendChild(sub);box.appendChild(gbtn);box.appendChild(errEl);
-    ov.appendChild(title);ov.appendChild(box);
-    document.body.appendChild(ov);
-  }
-
-  function hideLoginOverlay(){
-    var ov=document.getElementById('fb-login-overlay');
-    if(ov){ov.style.opacity='0';ov.style.transition='opacity .4s';setTimeout(function(){ov.remove();},400);}
-  }
-
-  function loadScript(src,cb,onerr){
-  var s=document.createElement('script');
-  s.src=src;
-  s.onload=cb||function(){};
-  s.onerror=function(){
-    console.warn('[Vesta] Script non chargé (réseau/CORS):', src);
-    if(onerr) onerr();
-  };
-  s.crossOrigin='anonymous';
-  document.head.appendChild(s);
+// Fonctions utilitaires exposées globalement
+function _userRef(uid) {
+  return ref(_db2, 'users/' + uid + '/state');
 }
 
-  document.addEventListener('DOMContentLoaded',function(){
-    createSyncUI();
-    loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',function(){
-      loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js',function(){
-        loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js',function(){
-          firebase.initializeApp(FB_CONFIG);
-          _db=firebase.database();
-          firebase.auth().onAuthStateChanged(function(user){
-            if(user){
-              _uid=user.uid;_sync=true;
-              hideLoginOverlay();updateSyncUI('connecting');startSync();
-            } else {
-              _uid=null;_sync=false;updateSyncUI('error');
-              if(!document.getElementById('fb-login-overlay'))createLoginOverlay();
-            }
-          });
-        });
-      });
-    });
-  });
+function _hashStr(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) { h = (Math.imul(31, h) + str.charCodeAt(i)) | 0; }
+  return h.toString(36);
+}
 
-  document.addEventListener('visibilitychange',function(){
-    if(!document.hidden&&_sync&&_uid){
-      userRef().once('value').then(function(snap){
-        var val=snap.val();if(!val||!val.data)return;
-        var h=val.hash||hashStr(val.data);if(h!==_lastHash){_lastHash=h;applyRemote(val.data);}
-      });
+let _lastHash = '';
+
+function _saveRemote(uid) {
+  const S = window._pState ? window._pState() : null;
+  if (!S || !uid) return;
+  const raw = JSON.stringify(S);
+  const h   = _hashStr(raw);
+  if (h === _lastHash) return;
+  _lastHash = h;
+  set(_userRef(uid), { data: raw, ts: Date.now(), hash: h });
+}
+
+function _loadRemote(uid) {
+  get(_userRef(uid)).then(snap => {
+    const val = snap.val();
+    if (!val || !val.data) return;
+    const h = val.hash || _hashStr(val.data);
+    if (h === _lastHash) return;
+    _lastHash = h;
+    try {
+      const parsed = JSON.parse(val.data);
+      const S = window._pState ? window._pState() : null;
+      if (S) {
+        Object.keys(parsed).forEach(k => { S[k] = parsed[k]; });
+        ['positions','immo','livrets','metaux'].forEach(k => { if (!S[k]) S[k] = []; });
+        if (window._app && window._app.renderAll) window._app.renderAll();
+      }
+    } catch(e) { console.warn('[Vesta Firebase] Parse error', e); }
+  }).catch(e => console.warn('[Vesta Firebase] Load error', e));
+}
+
+// Exposer les fonctions sync sur window
+window._fbSaveRemote = _saveRemote;
+window._fbLoadRemote = _loadRemote;
+
+// Auth state
+onAuthStateChanged(_auth, user => {
+  if (user) {
+    window._fbUid  = user.uid;
+    window._fbSync = true;
+    if (window.hideLoginOverlay) window.hideLoginOverlay();
+    if (window.updateSyncUI)     window.updateSyncUI('ok');
+    _loadRemote(user.uid);
+
+    // Auto-save toutes les 30s
+    if (!window._fbAutoSave) {
+      window._fbAutoSave = setInterval(() => { _saveRemote(user.uid); }, 30000);
     }
-  });
-})();
+
+    // Exposer save pour usage depuis le reste de l'app
+    window._saveState = () => _saveRemote(user.uid);
+    window._syncState = (S) => { _saveRemote(user.uid); };
+
+  } else {
+    window._fbUid  = null;
+    window._fbSync = false;
+    if (window.updateSyncUI) window.updateSyncUI('error');
+    if (!document.getElementById('fb-login-overlay') && window.createLoginOverlay) {
+      window.createLoginOverlay();
+    }
+  }
+});
+
+// Login helpers
+window._fbLogin = async (email, password) => {
+  try {
+    await signInWithEmailAndPassword(_auth, email, password);
+  } catch(e) {
+    if (window._toast) window._toast('❌ Connexion échouée : ' + e.message);
+  }
+};
+
+window._fbLoginGoogle = async () => {
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(_auth, provider);
+  } catch(e) {
+    if (window._toast) window._toast('❌ Google login échoué : ' + e.message);
+  }
+};
+
+window._fbLogout = async () => {
+  // Sauvegarder avant déconnexion
+  if (window._fbUid) _saveRemote(window._fbUid);
+  await signOut(_auth);
+  if (window._toast) window._toast('👋 Déconnecté');
+};
+
+// Visibilité : recharger depuis Firebase si onglet redevient actif
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && window._fbSync && window._fbUid) {
+    _loadRemote(window._fbUid);
+  }
+});
+
+// Init UI sync au chargement
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.createSyncUI) window.createSyncUI();
+});
+
+console.log('[Vesta] Firebase ESM chargé ✅');
 </script>
+
 
 
 <script>
@@ -16437,31 +16560,136 @@ var METAL_TYPES = [
 window.METAL_TYPES = METAL_TYPES;
 
 // Fetch cours or/argent via Frankfurt API
-async function fetchCoursMetaux() {
-  try {
-    var [rOr, rAg] = await Promise.all([
-      fetch('https://api.frankfurter.app/latest?from=XAU&to=EUR'),
-      fetch('https://api.frankfurter.app/latest?from=XAG&to=EUR'),
-    ]);
-    var dOr = await rOr.json();
-    var dAg = await rAg.json();
-    var orEurOz  = dOr.rates && dOr.rates.EUR ? (1 / dOr.rates.EUR) : null;
-    var agEurOz  = dAg.rates && dAg.rates.EUR ? (1 / dAg.rates.EUR) : null;
-    if (orEurOz) { _coursMetaux.or = orEurOz; _coursMetaux.argent = agEurOz; _coursMetaux.ts = Date.now(); }
-  } catch(e) {
-    if (!_coursMetaux.or) { _coursMetaux.or = 3900; _coursMetaux.argent = 36; }
+// ── Interval rafraîchissement auto ──────────────────────────
+var _metalRefreshInterval = null;
+
+function startMetalAutoRefresh() {
+  if (_metalRefreshInterval) return; // déjà actif
+  _metalRefreshInterval = setInterval(function() {
+    fetchCoursMetaux(false); // silencieux
+  }, 5 * 60 * 1000); // toutes les 5 minutes
+}
+
+async function fetchCoursMetaux(showStatus) {
+  var statusEl = document.getElementById('metal-refresh-status');
+  if (showStatus !== false && statusEl) {
+    statusEl.textContent = '⏳ Actualisation...';
+    statusEl.style.color = 'var(--muted)';
   }
+
+  var OZ = 31.1035;
+  var orEur = null, agEur = null, source = '';
+
+  // ── Source 1 : gold-api.com (temps réel, sans clé) ──────
+  try {
+    var [r1, r2] = await Promise.all([
+      fetch('https://gold-api.com/price/XAU'),
+      fetch('https://gold-api.com/price/XAG'),
+    ]);
+    if (r1.ok && r2.ok) {
+      var d1 = await r1.json();
+      var d2 = await r2.json();
+      // gold-api retourne en USD → convertir en EUR
+      if (d1.price_gram_24k || d1.price) {
+        var usdEur = 0.93; // taux approx USD/EUR
+        // Essayer de récupérer le taux EUR en même temps
+        try {
+          var rEur = await fetch('https://api.frankfurter.app/latest?from=USD&to=EUR');
+          var dEur = await rEur.json();
+          if (dEur.rates && dEur.rates.EUR) usdEur = dEur.rates.EUR;
+        } catch(e) {}
+        // gold-api donne le prix en USD par once
+        var orUsd = d1.price || (d1.price_gram_24k * OZ);
+        var agUsd = d2.price || (d2.price_gram_24k * OZ);
+        orEur  = orUsd * usdEur;
+        agEur  = agUsd * usdEur;
+        source = 'gold-api.com';
+      }
+    }
+  } catch(e) {}
+
+  // ── Source 2 : metals.dev (fallback, gratuit sans clé) ──
+  if (!orEur) {
+    try {
+      var r3 = await fetch('https://api.metals.dev/v1/latest?api_key=&currency=EUR&unit=toz');
+      if (r3.ok) {
+        var d3 = await r3.json();
+        if (d3.metals && d3.metals.XAU) {
+          orEur  = d3.metals.XAU;
+          agEur  = d3.metals.XAG;
+          source = 'metals.dev';
+        }
+      }
+    } catch(e) {}
+  }
+
+  // ── Source 3 : frankfurter.app (fallback stable) ────────
+  if (!orEur) {
+    try {
+      var [rF1, rF2] = await Promise.all([
+        fetch('https://api.frankfurter.app/latest?from=XAU&to=EUR'),
+        fetch('https://api.frankfurter.app/latest?from=XAG&to=EUR'),
+      ]);
+      var dF1 = await rF1.json();
+      var dF2 = await rF2.json();
+      if (dF1.rates && dF1.rates.EUR) {
+        orEur  = 1 / dF1.rates.EUR;
+        agEur  = dF2.rates && dF2.rates.EUR ? 1 / dF2.rates.EUR : null;
+        source = 'frankfurter.app';
+      }
+    } catch(e) {}
+  }
+
+  // ── Mettre à jour le cache ──────────────────────────────
+  if (orEur) {
+    _coursMetaux.or     = orEur;
+    _coursMetaux.argent = agEur;
+    _coursMetaux.ts     = Date.now();
+    _coursMetaux.source = source;
+  } else if (!_coursMetaux.or) {
+    // Dernier recours : cours approximatif
+    _coursMetaux.or     = 3900;
+    _coursMetaux.argent = 36;
+    _coursMetaux.source = 'estimation';
+  }
+
   _updateCoursUI();
   _renderMetaux();
+  if (window.renderAll) renderAll();
+  startMetalAutoRefresh(); // démarrer l'auto-refresh
+
+  // Mettre à jour le statut
+  if (statusEl) {
+    if (orEur) {
+      var ts = new Date(_coursMetaux.ts);
+      var hh = ts.getHours().toString().padStart(2,'0');
+      var mm = ts.getMinutes().toString().padStart(2,'0');
+      statusEl.textContent = '✅ ' + hh + ':' + mm + ' · ' + (_coursMetaux.source || '');
+      statusEl.style.color = 'var(--green)';
+    } else {
+      statusEl.textContent = '⚠️ Cours non disponible (estimation)';
+      statusEl.style.color = 'var(--red)';
+    }
+  }
 }
 window.fetchCoursMetaux = fetchCoursMetaux;
 
 function _updateCoursUI() {
-  var OZ = 31.1035;
-  var or = _coursMetaux.or, ag = _coursMetaux.argent;
-  var set = function(id, v) { var el=document.getElementById(id); if(el) el.textContent=v; };
-  if (or) { set('cours-or', Math.round(or).toLocaleString('fr')+' €/oz'); set('cours-or-g', (or/OZ).toFixed(2)+' €/g'); }
-  if (ag) { set('cours-argent', Math.round(ag).toLocaleString('fr')+' €/oz'); set('cours-argent-g', (ag/OZ).toFixed(2)+' €/g'); }
+  var OZ  = 31.1035;
+  var or  = _coursMetaux.or;
+  var ag  = _coursMetaux.argent;
+  var set = function(id, v, col) {
+    var el = document.getElementById(id);
+    if (el) { el.textContent = v; if (col) el.style.color = col; }
+  };
+  if (or) {
+    set('cours-or',   Math.round(or).toLocaleString('fr') + ' €/oz');
+    set('cours-or-g', (or/OZ).toFixed(2) + ' €/g · ' + (or*1000/OZ).toFixed(0) + ' €/kg');
+  }
+  if (ag) {
+    set('cours-argent',   Math.round(ag).toLocaleString('fr') + ' €/oz');
+    set('cours-argent-g', (ag/OZ).toFixed(2) + ' €/g');
+  }
 }
 
 function ajouterMetal() {
@@ -16641,6 +16869,7 @@ function saveMetal() {
   closeOv('ov-add-metal');
   _renderMetaux();
   fetchCoursMetaux();
+  if (window.renderAll) renderAll();
   if (window._toast) window._toast(type.emoji+' '+label+' ajoute !');
 }
 window.saveMetal = saveMetal;
@@ -16651,6 +16880,7 @@ function supprimerMetal(id) {
   S.metaux = S.metaux.filter(function(m){ return m.id !== id; });
   if (window._syncState) window._syncState(S);
   _renderMetaux();
+  if (window.renderAll) renderAll();
 }
 window.supprimerMetal = supprimerMetal;
 
@@ -16844,249 +17074,25 @@ window.switchOppTab = switchOppTab;
 async function rechercherOpportunitesLive() {
   var liveContent = document.getElementById('opp-live-content');
   if (!liveContent) return;
-
-  // ── Récupérer tous les critères sélectionnés ────────────────
-  var gv = function(id){ var e=document.getElementById(id); return e?e.value.trim():''; };
-  var gn = function(id){ var v=gv(id); return v?parseFloat(v):null; };
-  var secteur   = gv('opp-secteur');
-  var type      = gv('opp-type');
-  var zone      = gv('opp-zone');
-  var horizon   = gv('opp-horizon');
-  var enveloppe = gv('opp-enveloppe');
-  var risque    = gv('opp-risque');
-  var cap       = gv('opp-cap');
-  var esg       = gv('opp-esg');
-  var momentum  = gv('opp-momentum');
-  var strategie = gv('opp-strategie');
-  var perMax    = gn('opp-per-max');
-  var pbMax     = gn('opp-pb-max');
-  var divMin    = gn('opp-div-min');
-  var growthMin = gn('opp-growth-min');
-  var terMax    = gn('opp-ter-max');
-
-  // Description détaillée des critères pour le prompt
-  var criteresDetails = [];
-  if (type && type !== 'all') criteresDetails.push('Type: ' + type);
-  if (enveloppe && enveloppe !== 'any') criteresDetails.push('Enveloppe: ' + enveloppe.toUpperCase() + ' obligatoire');
-  if (secteur && secteur !== 'any') criteresDetails.push('Secteur: ' + secteur);
-  if (zone && zone !== 'any') criteresDetails.push('Zone géographique: ' + zone);
-  if (cap && cap !== 'any') criteresDetails.push('Capitalisation: ' + cap);
-  if (horizon) criteresDetails.push('Horizon: ' + (horizon === 'long' ? '10+ ans' : horizon === 'moyen' ? '5-10 ans' : horizon));
-  if (risque && risque !== 'any') criteresDetails.push('Risque max: ' + risque);
-  if (esg === 'esg') criteresDetails.push('Contrainte ESG/ISR obligatoire');
-  if (momentum && momentum !== 'any') criteresDetails.push('Momentum: ' + momentum);
-  if (strategie && strategie !== 'any') criteresDetails.push('Stratégie: ' + strategie);
-  if (perMax) criteresDetails.push('PER maximum: ' + perMax);
-  if (pbMax)  criteresDetails.push('P/B maximum: ' + pbMax);
-  if (divMin) criteresDetails.push('Dividende minimum: ' + divMin + '%');
-  if (growthMin) criteresDetails.push('Croissance CA minimum: ' + growthMin + '%/an');
-  if (terMax) criteresDetails.push('TER maximum (ETF): ' + terMax + '%');
-  if (criteresDetails.length === 0) criteresDetails.push('Aucun filtre spécifique - recherche large pépites mondiales');
-
-  // Récupérer le contexte de la conversation Vesta IA
-  var iaContext = '';
-  var iaConv = window._iaConversation || [];
-  if (iaConv.length > 0) {
-    var recentMsgs = iaConv.slice(-6).map(function(m) {
-      return (m.role === 'user' ? 'Maxime: ' : 'Vesta: ') + (typeof m.content === 'string' ? m.content.slice(0, 200) : '');
-    }).join('\n');
-    iaContext = '\n\nCONTEXTE DISCUSSION RÉCENTE AVEC VESTA:\n' + recentMsgs + '\n(Utilise ce contexte pour affiner les suggestions si pertinent.)';
-  }
-
   liveContent.innerHTML = '<div style="padding:24px;text-align:center;">'
-    + '<div style="font-size:32px;animation:vestaPulse 1.5s infinite;display:inline-block;">'
-    + (window.VESTA_AVATAR_IMG ? '<img src="' + window.VESTA_AVATAR_IMG + '" style="width:48px;height:48px;border-radius:50%;object-fit:cover;object-position:top;border:2px solid var(--gold);">' : '🔥')
-    + '</div>'
-    + '<div style="margin-top:12px;font-size:13px;font-weight:600;color:var(--text);">Vesta recherche sur internet...</div>'
-    + '<div style="margin-top:6px;font-size:11px;color:var(--muted);">Analyse des marchés · Nouvelles tendances · Entreprises émergentes</div>'
-    + '<div style="margin-top:4px;font-size:10px;color:var(--muted);font-family:JetBrains Mono,monospace;" id="live-search-status">Connexion à l\'IA...</div>'
+    + '<div style="font-size:32px;margin-bottom:12px;">📋</div>'
+    + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">Analyse via Claude.ai</div>'
+    + '<div style="font-size:11px;color:var(--muted);margin-bottom:16px;">Exportez votre bilan et discutez en direct avec Claude pour identifier les meilleures opportunites.</div>'
+    + '<button onclick="exporterContexteClaude()" class="btn" style="background:var(--gold);color:#1a1a2e;font-weight:700;">📋 Ouvrir Claude.ai avec mon bilan</button>'
     + '</div>';
-
-  var statusEl = function(t) {
-    var el = document.getElementById('live-search-status');
-    if (el) el.textContent = t;
-  };
-
-  // Vérifier clé API disponible
-  var active = window.getActiveProvider ? window.getActiveProvider() : null;
-  if (!active || !active.key) {
-    liveContent.innerHTML = '<div style="padding:20px;text-align:center;">'
-      + '<div style="font-size:36px;margin-bottom:12px;">🔑</div>'
-      + '<div style="font-size:13px;color:var(--text);margin-bottom:8px;">Clé API requise pour la recherche live</div>'
-      + '<div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Configurez Groq (gratuit) pour que Vesta recherche de vraies opportunités en temps réel</div>'
-      + '<button onclick="demanderCleAPI()" class="btn">🔑 Configurer une clé API gratuite</button>'
-      + '<div style="margin-top:12px;font-size:10px;color:var(--muted);">Ou utilisez l\'onglet "Base Vesta" ci-dessus</div>'
-      + '</div>';
-    return;
-  }
-
-  try {
-    var NL = String.fromCharCode(10);
-    var peaOk = enveloppe === 'pea';
-
-        var NL = String.fromCharCode(10);
-    var peaOk = enveloppe === 'pea';
-
-    var prompt = 'Tu es un trader et analyste financier expert, specialise dans la detection de pepites boursieres AVANT leur grande ascension (style early Nvidia 2019, ASML 2015, Adyen 2018).' + NL
-      + 'PROFIL : Maxime, 29 ans, France, TMI 11%, PEA 10/2024, horizon retraite 2057, profil offensif.' + NL + NL
-      + 'CRITERES :' + NL
-      + criteresDetails.map(function(c){ return '- ' + c; }).join(NL) + NL + NL
-      + (peaOk ? 'PEA OBLIGATOIRE : uniquement actions zone UE/EEE ou ETF eligibles PEA.' + NL : '')
-      + iaContext
-      + 'UNIVERS ELARGI a explorer :' + NL
-      + '- Small caps (50M-1Md EUR) : champions caches, niche monopole, peu suivis' + NL
-      + '- Private equity cote : Eurazeo, Tikehau, EQT, Partners Group - acces PE via bourse' + NL
-      + '- Deep value : decotes injustes, actif net > cours, catalyseur a venir' + NL
-      + '- Secteurs emergents : IA edge, cybersecurite, eau, vieillissement, defense EU' + NL + NL
-      + 'Trouve 5-8 opportunites concretes. Sois un fonds de conviction : cherche le prochain 10-bagger.' + NL + NL
-      + 'JSON strict uniquement :' + NL
-      + '[{"nom":"Nom","ticker":"TICK.PA","type":"pepite","pea":' + (peaOk?'true':'false') + ',"secteur":"tech","zone":"france","capitalisation":"small","per":15,"croissance_annuelle":20,"dividende_pct":0,"risque":"med","monopole":"Avantage unique","these":"Pourquoi maintenant","catalyseurs":["Cat1","Cat2"],"risques":["Risque1"],"potentiel":"3-8x en 5 ans","score_conviction":8}]' + NL
-      + 'Aucun texte hors du JSON.';
-    statusEl('Vesta analyse les marchés actuels...');
-
-    var resp = await callClaudeIA(prompt, true);
-    statusEl('Traitement des résultats...');
-
-    if (!resp || resp.startsWith('⚠️') || resp.startsWith('⏱️') || resp.startsWith('⏳')) {
-      throw new Error(resp || 'Pas de réponse');
-    }
-
-    // Parser le JSON
-    // ── Parser robuste — corrige les erreurs JSON fréquentes de l'IA ──
-    var jsonMatch = resp.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) throw new Error('Format JSON invalide dans la réponse');
-
-    var rawJson = jsonMatch[0];
-    // Nettoyages courants :
-    // 1. Apostrophes dans les valeurs string → remplacer par &#39; avant parse
-    // 2. Virgules traînantes avant } ou ]
-    // 3. true/false non quotés → ok, mais "true"/"false" string → convertir
-    // 4. Commentaires JS // ... → supprimer
-    var cleanJson = rawJson
-      .replace(/\/\/[^\n]*/g, '')                    // supprimer commentaires
-      .replace(/,(\s*[}\]])/g, '$1')                 // virgules traînantes
-      .replace(/([{,]\s*)'([^']+)'(\s*:)/g, '$1"$2"$3')  // clés en single quotes
-      .replace(/:\s*'([^']*?)'/g, function(m, val) { // valeurs en single quotes
-        return ': "' + val.replace(/"/g, '\\"') + '"';
-      })
-      .replace(/:\s*True\b/g, ': true')              // Python True
-      .replace(/:\s*False\b/g, ': false')            // Python False
-      .replace(/:\s*None\b/g, ': null')              // Python None
-      .replace(/,\s*,/g, ',');                        // doubles virgules
-
-    var oppsLive;
-    try {
-      oppsLive = JSON.parse(cleanJson);
-    } catch(parseErr) {
-      // Dernier recours : extraire objet par objet avec regex
-      var objMatches = cleanJson.match(/\{[^{}]*\}/g);
-      if (objMatches && objMatches.length > 0) {
-        oppsLive = [];
-        objMatches.forEach(function(objStr) {
-          try { oppsLive.push(JSON.parse(objStr)); } catch(e) {}
-        });
-      }
-      if (!oppsLive || oppsLive.length === 0) {
-        throw new Error('JSON non parseable même après nettoyage : ' + parseErr.message);
-      }
-    }
-
-    if (!Array.isArray(oppsLive) || oppsLive.length === 0) throw new Error('Aucune opportunité retournée');
-
-    // Construire les cartes
-    var learn = sessionStorage.getItem('pierre-learn-mode') === '1';
-    var html  = '<div style="margin-bottom:10px;padding:8px 14px;background:linear-gradient(135deg,var(--blue)18,transparent);border:1px solid var(--blue)33;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">'
-      + '<div><span style="font-size:11px;font-weight:700;color:var(--blue);">🌐 ' + oppsLive.length + ' opportunités trouvées par Vesta IA</span>'
-      + '<div style="font-size:9px;color:var(--muted);font-family:JetBrains Mono,monospace;">Analyse en temps réel · ' + new Date().toLocaleDateString('fr-FR') + '</div></div>'
-      + '<button onclick="rechercherOpportunitesLive()" style="font-size:9px;background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;cursor:pointer;color:var(--muted);font-family:inherit;">↻ Relancer</button>'
-      + '</div>';
-
-    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;">';
-
-    oppsLive.forEach(function(o) {
-      var isPepite = o.type === 'pepite' || (o.croissance_annuelle && o.croissance_annuelle > 25);
-      var score = o.score_conviction || 7;
-      var col = isPepite ? '#f97316' : score >= 8 ? 'var(--green)' : score >= 6 ? 'var(--gold)' : 'var(--blue)';
-
-      html += '<div style="border-radius:12px;padding:14px;border-left:3px solid ' + col + ';background:var(--s2);">';
-
-      // Badge pépite
-      if (isPepite) {
-        html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">'
-          + '<span style="background:#f97316;color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;">🚀 PÉPITE LIVE</span>'
-          + (o.pea ? '<span style="background:var(--gold)22;color:var(--gold);font-size:9px;padding:2px 8px;border-radius:10px;border:1px solid var(--gold)44;">PEA ✓</span>' : '<span style="background:var(--s3);color:var(--muted);font-size:9px;padding:2px 8px;border-radius:10px;">CTO</span>')
-          + '</div>';
-      }
-
-      // Header
-      html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">';
-      html += '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13px;">' + (o.nom || '?') + '</div>';
-      html += '<div style="font-family:JetBrains Mono,monospace;font-size:10px;color:var(--muted);">' + (o.ticker || '') + ' · ' + (o.zone || '') + ' · ' + (o.secteur || '') + '</div></div>';
-      html += '<div style="text-align:right;flex-shrink:0;margin-left:10px;"><div style="font-size:22px;font-weight:700;color:' + col + ';font-family:JetBrains Mono,monospace;">' + score + '</div><div style="font-size:9px;color:var(--muted);">/10</div></div></div>';
-
-      // Tags
-      html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">';
-      if (o.per)                html += '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:var(--s3);color:var(--muted);font-family:JetBrains Mono,monospace;">PER ' + o.per + '</span>';
-      if (o.croissance_annuelle) html += '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:var(--s3);color:#f97316;font-family:JetBrains Mono,monospace;">+' + o.croissance_annuelle + '%/an</span>';
-      if (o.dividende_pct)      html += '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:var(--s3);color:var(--green);font-family:JetBrains Mono,monospace;">Div ' + o.dividende_pct + '%</span>';
-      if (o.capitalisation)     html += '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:var(--s3);color:var(--muted);font-family:JetBrains Mono,monospace;">' + o.capitalisation + '</span>';
-      if (o.risque)             html += '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:var(--s3);color:var(--muted);font-family:JetBrains Mono,monospace;">' + o.risque + ' risk</span>';
-      html += '</div>';
-
-      // Monopole
-      if (o.monopole) html += '<div style="font-size:10px;color:#8b5cf6;font-weight:600;margin-bottom:6px;">🏆 ' + o.monopole + '</div>';
-
-      // Thèse
-      if (o.these) html += '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5;">' + o.these + '</div>';
-
-      // Détails mode apprentissage ou pépite
-      if ((learn || isPepite) && (o.catalyseurs || o.risques)) {
-        html += '<div style="padding:8px;background:var(--s3);border-radius:6px;margin-bottom:8px;font-size:10px;line-height:1.6;">';
-        if (o.catalyseurs && o.catalyseurs.length) {
-          html += '<div style="color:var(--green);font-weight:600;">✅ Catalyseurs</div>';
-          o.catalyseurs.forEach(function(c){ html += '<div style="color:var(--muted);padding-left:8px;">· ' + c + '</div>'; });
-        }
-        if (o.risques && o.risques.length) {
-          html += '<div style="color:var(--red);font-weight:600;margin-top:4px;">⚠️ Risques</div>';
-          o.risques.forEach(function(r){ html += '<div style="color:var(--muted);padding-left:8px;">· ' + r + '</div>'; });
-        }
-        html += '</div>';
-      }
-
-      // Potentiel
-      if (o.potentiel) html += '<div style="font-size:10px;color:#f97316;font-weight:700;margin-bottom:8px;">🎯 ' + o.potentiel + '</div>';
-
-      // Actions
-      html += '<div style="display:flex;gap:6px;">';
-      if (o.ticker) {
-        var yUrl = 'https://finance.yahoo.com/quote/' + o.ticker;
-        html += '<a href="' + yUrl + '" target="_blank" style="flex:1;background:var(--gold)22;border:1px solid var(--gold)55;border-radius:6px;padding:5px;font-size:10px;cursor:pointer;color:var(--gold);text-decoration:none;text-align:center;">📊 Yahoo Finance</a>';
-      }
-      if (o.pea) {
-        html += '<button onclick="if(window._toast)window._toast(\'Ajout watchlist bientot disponible\')" style="background:var(--s3);border:1px solid var(--bd);border-radius:6px;padding:5px 8px;font-size:10px;cursor:pointer;color:var(--muted);">⭐ Watch</button>';
-      }
-      html += '</div></div>';
-    });
-
-    html += '</div>';
-    liveContent.innerHTML = html;
-
-  } catch(err) {
-    liveContent.innerHTML = '<div style="padding:20px;">'
-      + '<div style="color:var(--red);font-size:13px;margin-bottom:8px;">⚠️ Erreur de recherche live</div>'
-      + '<div style="font-size:11px;color:var(--muted);margin-bottom:12px;">' + (err.message || String(err)).slice(0, 200) + '</div>'
-      + '<button onclick="rechercherOpportunitesLive()" class="btn sm">↻ Réessayer</button>'
-      + '<span style="font-size:10px;color:var(--muted);margin-left:10px;">ou consultez l\'onglet "Base Vesta"</span>'
-      + '</div>';
-  }
 }
 window.rechercherOpportunitesLive = rechercherOpportunitesLive;
 
-// ── Détection opportunités dans la conversation Vesta ────────
-// Si Vesta reçoit une question sur les opportunités → propose la recherche
+// ── Nettoyage JSON robuste ───────────────────────────────────
+function _cleanJsonStr(raw) {
+  return (raw||'')
+    .replace(/,([\s]*[}\]])/g, '$1')
+    .replace(/True\b/g,'true').replace(/False\b/g,'false').replace(/None\b/g,'null');
+}
+window._cleanJsonStr = _cleanJsonStr;
+
 function _detecterDemandeOpportunite(msg) {
-  var keywords = /opportunit|pépite|investir|action.*acheter|etf.*recom|que.*invest|bonne.*valeur|valeur.*acheter|pepite|ticker|bourse.*conseil|marché.*investir|portefeuille.*améliore|diversif/i;
-  return keywords.test(msg);
+  return /opportunit|pepite|investir|action.*acheter|etf.*recom|que.*invest|bonne.*valeur|valeur.*acheter|ticker|bourse.*conseil|marche.*investir|portefeuille|diversif/i.test(msg||'');
 }
 window._detecterDemandeOpportunite = _detecterDemandeOpportunite;
 
@@ -21313,6 +21319,270 @@ window.genererQuittancePDF = genererQuittancePDF;
     setTimeout(initQuittance, 800);
   }
 })();
+
+
+
+// ── Export contexte Vesta pour Claude.ai ─────────────────────
+function exporterContexteClaude() {
+  var S = window._pState ? window._pState() : null;
+  var c = window._cAll ? window._cAll() : {};
+  var OZ = 31.1035;
+  var or = (window._coursMetaux && window._coursMetaux.or) || 3900;
+  var ag = (window._coursMetaux && window._coursMetaux.argent) || 36;
+  var NL = '\n';
+
+  // Calcul métaux
+  var metauxTotal = 0;
+  var metauxDesc = '';
+  if (S && S.metaux && S.metaux.length) {
+    S.metaux.forEach(function(m) {
+      var val = m.typeId === 'etf_or' ? m.prixAchat : (m.grammes||0)/OZ*(m.metal==='or'?or:ag)*(m.qte||1);
+      metauxTotal += val;
+      metauxDesc += '  · ' + m.label + ' : ' + Math.round(val) + '€ (' + m.qte + ' pièce' + (m.qte>1?'s':'') + ')' + NL;
+    });
+  }
+
+  var date = new Date().toLocaleDateString('fr-FR', {day:'2-digit',month:'long',year:'numeric'});
+
+  var ctx = [
+    '# MON BILAN PATRIMONIAL VESTA — ' + date,
+    '=' .repeat(50),
+    '',
+    '## PROFIL',
+    'Maxime MORIN, 29 ans · SNCF Régulateur COGC Limoges · TMI 11% · Zone 3 IR (87)',
+    'PACS Alexia 22/09/2022 · Enfant né 04/06/2026 · Retraite visée 2057',
+    'Revenus : ~2 053€/mois net + primes ~30 000€/an',
+    '',
+    '## ENVELOPPES FINANCIÈRES',
+    'PEA BoursoBank :     ' + Math.round(c.pea||0).toLocaleString('fr') + ' €  (ouvert 25/10/2024 · exo IR le 25/10/2029)',
+    'AV Linxea Spirit 2 : ' + Math.round(c.av||0).toLocaleString('fr') + '  €  (ouverte 17/03/2025 · abattement 17/03/2033)',
+    'PEG SNCF :           ' + Math.round(c.peg||0).toLocaleString('fr') + '  €  (abondement 30%/20%/10%)',
+    'CTO :                ' + Math.round(c.cto||0).toLocaleString('fr') + '  €',
+    '',
+    '## IMMOBILIER',
+  ].concat(S && S.immo ? S.immo.map(function(b) {
+    return '· ' + (b.name||b.type||'Bien') + ' : valeur ' + Math.round(b.estim||b.valeur||0) + '€'
+      + ' · CRD ' + Math.round(b.crd||0) + '€ · loyer ' + Math.round(b.loyer||0) + '€/mois';
+  }) : ['· T2 Limoges LMNP : ~91 000€ · CRD ~75 081€ · loyer 560€/mois']).concat([
+    '',
+    '## LIVRETS',
+  ]).concat(S && S.livrets ? S.livrets.map(function(l) {
+    return '· ' + (l.name||l.type||'Livret') + ' : ' + Math.round(l.balance||0).toLocaleString('fr') + '€ · ' + (l.rate||0) + '%/an';
+  }) : ['· Données non disponibles']).concat([
+    '',
+    '## MÉTAUX PRÉCIEUX',
+    metauxTotal > 0 ? 'Total : ' + Math.round(metauxTotal).toLocaleString('fr') + ' €' : '(aucun enregistré)',
+    metauxDesc.trim(),
+    '  Cours or : ' + Math.round(or) + ' €/oz · Argent : ' + Math.round(ag) + ' €/oz',
+    '',
+    '## SYNTHÈSE PATRIMOINE',
+    'Capital financier :   ' + Math.round((c.pea||0)+(c.av||0)+(c.peg||0)+(c.cto||0)).toLocaleString('fr') + ' €',
+    'Immobilier net :      ' + Math.round((c.immoNet||0)+(c.rpNet||0)).toLocaleString('fr') + ' €',
+    'Livrets :             ' + Math.round(c.livT||0).toLocaleString('fr') + ' €',
+    'Métaux précieux :     ' + Math.round(metauxTotal).toLocaleString('fr') + ' €',
+    'PATRIMOINE TOTAL :    ' + Math.round((c.total||0)+metauxTotal).toLocaleString('fr') + ' €',
+    '',
+    '## SITUATION RETRAITE 2057',
+    'Années restantes : ' + (2057 - new Date().getFullYear()) + ' ans',
+    'Retraite SNCF estimée : ~2 300€/mois',
+    'T2 Limoges loyer : ~520€/mois (après fin crédit 2048)',
+    'Objectif revenus passifs PEA : 500-1 000€/mois',
+    '',
+    '=' .repeat(50),
+    'Posez vos questions à partir de ce contexte.',
+  ]).join(NL);
+
+  // Copier dans le presse-papiers
+  navigator.clipboard.writeText(ctx).then(function() {
+    // Ouvrir Claude.ai avec le contexte
+    window.open('https://claude.ai/new', '_blank');
+    if (window._toast) window._toast('✅ Bilan copié ! Collez dans Claude.ai avec Ctrl+V');
+  }).catch(function() {
+    // Fallback
+    var ta = document.createElement('textarea');
+    ta.value = ctx;
+    ta.style.cssText = 'position:fixed;top:-9999px;';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    window.open('https://claude.ai/new', '_blank');
+    if (window._toast) window._toast('✅ Bilan copié ! Collez dans Claude.ai avec Ctrl+V');
+  });
+}
+window.exporterContexteClaude = exporterContexteClaude;
+
+// ── Rapport mensuel complet pour Claude.ai ───────────────────
+function exporterRapportMensuel() {
+  var S = window._pState ? window._pState() : null;
+  var c = window._cAll   ? window._cAll()   : {};
+  var or = (window._coursMetaux && window._coursMetaux.or) || 3900;
+  var ag = (window._coursMetaux && window._coursMetaux.argent) || 36;
+  var OZ = 31.1035;
+  var date = new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+  var mois = new Date().toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+  var NL = '\n';
+
+  // Calcul métaux
+  var metauxTotal = 0, metauxLines = '';
+  if (S && S.metaux && S.metaux.length) {
+    S.metaux.forEach(function(m) {
+      var val = m.typeId==='etf_or' ? m.prixAchat : (m.grammes||0)/OZ*(m.metal==='or'?or:ag)*(m.qte||1);
+      metauxTotal += val;
+      metauxLines += '  · ' + m.label + ' : ' + Math.round(val) + ' € (' + m.qte + ' pc)' + NL;
+    });
+  }
+
+  var capFin = (c.pea||0)+(c.av||0)+(c.peg||0)+(c.cto||0);
+  var immoNet = (c.immoNet||0)+(c.rpNet||0);
+  var total   = capFin + immoNet + (c.livT||0) + metauxTotal;
+
+  var texte = [
+'╔══════════════════════════════════════════════════════════════╗',
+'  RAPPORT MENSUEL VESTA — ' + mois.toUpperCase(),
+'  Généré le ' + date,
+'╚══════════════════════════════════════════════════════════════╝',
+'',
+'━━━ MON PROFIL ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+'Maxime MORIN · 29 ans · SNCF Régulateur Limoges · TMI 11%',
+'PACS · Enfant né 06/2026 · Retraite cible 2057',
+'Revenus : ~2 053 €/mois net + primes ~30 000 €/an',
+'',
+'━━━ PATRIMOINE TOTAL : ' + Math.round(total/1000) + ' k€ ━━━━━━━━━━━━━━━━━━━━━━',
+'',
+'► Capital financier  : ' + Math.round(capFin/1000) + ' k€',
+'  · PEA BoursoBank   : ' + Math.round(c.pea||0).toLocaleString('fr') + ' €  (ouvert 10/2024 · exo 10/2029)',
+'  · AV Linxea Spirit : ' + Math.round(c.av||0).toLocaleString('fr') + ' €  (ouverte 03/2025 · exo 03/2033)',
+'  · PEG SNCF         : ' + Math.round(c.peg||0).toLocaleString('fr') + ' €  (abondement 30/20/10%)',
+'  · CTO              : ' + Math.round(c.cto||0).toLocaleString('fr') + ' €',
+'',
+'► Immobilier net     : ' + Math.round(immoNet/1000) + ' k€',
+].concat(S && S.immo ? S.immo.map(function(b){
+  return '  · '+(b.name||b.type)+' : val '+(b.estim||b.valeur||0)+' € · CRD '+(b.crd||0)+' € · loyer '+(b.loyer||0)+'€/mois';
+}) : ['  · T2 LMNP Limoges : ~91 k€ · CRD ~75 k€ · loyer 560 €/mois']).concat([
+'',
+'► Livrets            : ' + Math.round(c.livT||0).toLocaleString('fr') + ' €',
+'► Métaux précieux    : ' + Math.round(metauxTotal).toLocaleString('fr') + ' €',
+metauxLines.trim() ? metauxLines : '  (aucun)',
+'  Cours : Or ' + Math.round(or) + ' €/oz · Argent ' + Math.round(ag) + ' €/oz',
+'',
+'━━━ PROGRESSION RETRAITE 2057 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+'Années restantes : ' + (2057-new Date().getFullYear()) + ' ans',
+'Retraite SNCF estimée : ~2 300 €/mois',
+'T2 loyer après 2048   : ~520 €/mois',
+'Objectif revenus passifs PEA : 500-1 000 €/mois',
+'Projection capital 2057 (9%/an, DCA 200€/mois) : ~' + (function(){
+  var cap=capFin, n=2057-new Date().getFullYear();
+  for(var i=0;i<n;i++) cap=cap*1.09+2400;
+  return Math.round(cap/1000);
+})() + ' k€',
+'',
+'━━━ QUESTIONS POUR TON ANALYSE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+'',
+'1. BILAN MENSUEL : Analyse mon patrimoine ce mois-ci.',
+'   Quelle est la progression depuis le début ? Suis-je dans les clous',
+'   pour atteindre mes objectifs 2057 ? Que dois-je ajuster ?',
+'',
+'2. ÉTAT DU MARCHÉ : Comment le marché actuel (bourse, immo, taux,',
+'   or) impacte mon patrimoine spécifiquement ?',
+'   Quels risques ou opportunités dois-je surveiller ce mois-ci ?',
+'',
+'3. ECONOMIE MONDIALE : Quel est l\'etat economique mondial actuel ?',
+'   Inflation, banques centrales, geopolitique, recession possible ?',
+'   Comment cela affecte ma strategie patrimoniale ?',
+'',
+'Merci de structurer ta reponse en 3 parties correspondant aux',
+'3 questions ci-dessus, avec des recommandations concrètes et',
+'chiffrées adaptées à mon profil.',
+'',
+'══════════════════════════════════════════════════════════════',
+  ]).join(NL);
+
+  navigator.clipboard.writeText(texte).then(function() {
+    window.open('https://claude.ai/new', '_blank');
+    if (window._toast) window._toast('📋 Rapport copié ! Colle dans Claude.ai (Ctrl+V)');
+  }).catch(function() {
+    var ta = document.createElement('textarea');
+    ta.value = texte; ta.style.cssText = 'position:fixed;top:-9999px;';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    window.open('https://claude.ai/new', '_blank');
+    if (window._toast) window._toast('📋 Rapport copié ! Colle dans Claude.ai (Ctrl+V)');
+  });
+}
+window.exporterRapportMensuel = exporterRapportMensuel;
+
+// ── Synthèse patrimoniale locale (sans API) ──────────────────
+function genererSyntheseLocale() {
+  var el = document.getElementById('marche-resume-content');
+  if (!el) return;
+  var S = window._pState ? window._pState() : null;
+  var c = window._cAll ? window._cAll() : {};
+  var or = (window._coursMetaux && window._coursMetaux.or) || 3900;
+
+  var capFin = (c.pea||0)+(c.av||0)+(c.peg||0)+(c.cto||0);
+  var livT = c.livT || 0;
+  var immoNet = (c.immoNet||0)+(c.rpNet||0);
+  var total = capFin + immoNet + livT;
+
+  var conseils = [];
+
+  // Règle 1 : épargne de précaution
+  if (livT < 10000) {
+    conseils.push({ico:'🛡️', col:'var(--gold)', txt:'Épargne de précaution : ' + Math.round(livT).toLocaleString('fr') + '€. Cible 3-6 mois de dépenses (~10-20k€). Renforcer Livret A/LEP avant d\'investir davantage.'});
+  } else {
+    conseils.push({ico:'✅', col:'var(--green)', txt:'Épargne de précaution solide (' + Math.round(livT).toLocaleString('fr') + '€).'});
+  }
+
+  // Règle 2 : exposition actions
+  var pctActions = total > 0 ? Math.round((c.pea||0)/total*100) : 0;
+  if (pctActions < 20 && (c.pea||0) < 30000) {
+    conseils.push({ico:'📈', col:'var(--blue)', txt:'Exposition actions PEA : ' + pctActions + '% du patrimoine. À 29 ans avec horizon 2057, vous pouvez viser 40-60% en actions (ETF ESE S&P500). Augmentez le DCA mensuel.'});
+  }
+
+  // Règle 3 : PEA fiscalité
+  conseils.push({ico:'⏳', col:'var(--green)', txt:'PEA : exonération d\'impôt sur plus-values à partir d\'octobre 2029 (5 ans). Ne pas faire de retrait avant cette date.'});
+
+  // Règle 4 : diversification métaux
+  var metauxT = c.metauxT || 0;
+  if (metauxT < total * 0.05 && total > 50000) {
+    conseils.push({ico:'🥇', col:'#c9a84c', txt:'Métaux précieux : ' + Math.round(metauxT).toLocaleString('fr') + '€. L\'or (cours actuel ' + Math.round(or) + '€/oz) peut représenter 5-10% du patrimoine en diversification anti-inflation.'});
+  }
+
+  // Règle 5 : immobilier
+  if (immoNet > total * 0.6) {
+    conseils.push({ico:'🏘', col:'#9b72cf', txt:'Patrimoine immobilier dominant (' + Math.round(immoNet/total*100) + '%). Pensez à diversifier vers les actifs financiers liquides.'});
+  }
+
+  // Règle 6 : retraite 2057
+  var annees = 2057 - new Date().getFullYear();
+  var cap2057 = capFin;
+  for (var i=0; i<annees; i++) cap2057 = cap2057*1.08 + 200*12;
+  var rente = Math.round(cap2057*0.04/12);
+  conseils.push({ico:'🎯', col:'var(--gold)', txt:'Projection 2057 (' + annees + ' ans, 8%/an, DCA 200€/mois) : ~' + Math.round(cap2057/1000) + 'k€ → rente ~' + rente + '€/mois + 2300€ SNCF + loyer T2.'});
+
+  var html = '<div style="display:flex;flex-direction:column;gap:10px;">';
+  conseils.forEach(function(c2) {
+    html += '<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 10px;background:var(--s2);border-radius:8px;border-left:2px solid ' + c2.col + ';">';
+    html += '<span style="font-size:16px;flex-shrink:0;">' + c2.ico + '</span>';
+    html += '<span style="font-size:11px;line-height:1.5;color:var(--text);">' + c2.txt + '</span>';
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '<div style="font-size:9px;color:var(--muted);margin-top:10px;text-align:center;font-family:JetBrains Mono,monospace;">Synthèse calculée localement · Pour une analyse approfondie du marché, utilisez le bouton Claude.ai ci-dessous</div>';
+
+  el.innerHTML = html;
+}
+window.genererSyntheseLocale = genererSyntheseLocale;
+
+// Auto-générer au chargement de l'onglet actu
+(function(){
+  var _origInitActus = window.initActus;
+  window.initActus = function() {
+    if (_origInitActus) _origInitActus();
+    setTimeout(genererSyntheseLocale, 300);
+  };
+})();
+
 
 
 } catch(e) {
